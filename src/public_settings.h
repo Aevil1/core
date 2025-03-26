@@ -27,7 +27,7 @@
 #define TRANSACTION_SPARSENESS 4
 
 // Below are 2 variables that are used for auto-F5 feature:
-#define AUTO_FORCE_NEXT_TICK_THRESHOLD 3ULL // Multiplier of TARGET_TICK_DURATION for the system to detect "F5 case" | set to 0 to disable
+#define AUTO_FORCE_NEXT_TICK_THRESHOLD 40ULL // Multiplier of TARGET_TICK_DURATION for the system to detect "F5 case" | set to 0 to disable
                                             // to prevent bad actor causing misalignment.
                                             // depends on actual tick time of the network, operators should set this number randomly in this range [12, 26]
                                             // eg: If AUTO_FORCE_NEXT_TICK_THRESHOLD is 8 and TARGET_TICK_DURATION is 2, then the system will start "auto F5 procedure" after 16 seconds after receveing 451+ votes
