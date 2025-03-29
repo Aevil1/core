@@ -1680,6 +1680,10 @@ namespace QPI
 
 	#define LOG_WARNING(message) __logContractWarningMessage(CONTRACT_INDEX, message);
 
+	#define PAUSE_LOGGING  __logContractPauseLogging();
+
+	#define RESUME_LOGGING __logContractResumeLogging();
+
 	#define PRIVATE_FUNCTION(function) \
 		private: \
 			typedef QPI::NoData function##_locals; \

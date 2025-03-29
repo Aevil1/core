@@ -239,6 +239,7 @@ public:
     inline static unsigned int currentTxId;
     inline static unsigned int currentTick;
     inline static BlobInfo currentTxInfo;
+    inline static bool pauseFlag; // temporarily ignore logging event due to benchmark
     // 5 special txs for 5 special events in qubic
     inline static unsigned int SC_INITIALIZE_TX = NUMBER_OF_TRANSACTIONS_PER_TICK + 0;
     inline static unsigned int SC_BEGIN_EPOCH_TX = NUMBER_OF_TRANSACTIONS_PER_TICK + 1;
@@ -424,6 +425,7 @@ public:
             }
         }
         reset(0, 0);
+        pauseFlag = false;
 #endif
         return true;
     }
@@ -469,6 +471,10 @@ public:
 
     static void logMessage(unsigned int messageSize, unsigned char messageType, const void* message)
     {
+        if (pauseFlag)
+        {
+            return;
+        }
 #if ENABLED_LOGGING
         tx.addLogId();
         if (logBufferTail + LOG_HEADER_SIZE + messageSize >= LOG_BUFFER_SIZE)
@@ -628,6 +634,16 @@ public:
 #endif
     }
 
+    void pauseLogging()
+    {
+        pauseFlag = true;
+    }
+
+    void resumeLogging()
+    {
+        pauseFlag = false;
+    }
+
     // get logging content from log ID
     static void processRequestLog(Peer* peer, RequestResponseHeader* header);
 
@@ -660,4 +676,14 @@ template <typename T>
 static void __logContractWarningMessage(unsigned int size, T& msg)
 {
     logger.__logContractWarningMessage(size, msg);
+}
+
+static void __logContractPauseLogging()
+{
+    logger.pauseLogging();
+}
+
+static void __logContractResumeLogging()
+{
+    logger.resumeLogging();
 }

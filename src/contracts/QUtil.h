@@ -303,6 +303,7 @@ public:
     * @return returnCode (0 means success)
     */
     PUBLIC_PROCEDURE_WITH_LOCALS(SendToManyBenchmark)
+        PAUSE_LOGGING
         state.logger = QUtilLogger{ 0,  0, qpi.invocator(), SELF, qpi.invocationReward(), STM1_TRIGGERED };
         LOG_INFO(state.logger);
         output.total = 0;
@@ -365,6 +366,7 @@ public:
 
         state.logger = QUtilLogger{ 0,  0, qpi.invocator(), SELF, output.total, STM1_SUCCESS };
         LOG_INFO(state.logger);
+        RESUME_LOGGING
     _
 
     /**

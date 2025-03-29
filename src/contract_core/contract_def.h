@@ -42,6 +42,9 @@ template <typename T> static void __logContractDebugMessage(unsigned int, T&);
 template <typename T> static void __logContractErrorMessage(unsigned int, T&);
 template <typename T> static void __logContractInfoMessage(unsigned int, T&);
 template <typename T> static void __logContractWarningMessage(unsigned int, T&);
+static void __logContractPauseLogging();
+static void __logContractResumeLogging();
+
 static void* __scratchpad();    // TODO: concurrency support (n buffers for n allowed concurrent contract executions)
 // static void* __tryAcquireScratchpad(unsigned int size);  // Thread-safe, may return nullptr if no appropriate buffer is available
 // static void __ReleaseScratchpad(void*);
