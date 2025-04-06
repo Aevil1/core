@@ -2585,7 +2585,7 @@ static void processTick(unsigned long long processorNumber)
 
                     unsigned int j = 0;
 
-                    unsigned int numberOfEntityPendingTransactionIndices;
+                    /*unsigned int numberOfEntityPendingTransactionIndices;
                     for (numberOfEntityPendingTransactionIndices = 0; numberOfEntityPendingTransactionIndices < NUMBER_OF_COMPUTORS * MAX_NUMBER_OF_PENDING_TRANSACTIONS_PER_COMPUTOR; numberOfEntityPendingTransactionIndices++)
                     {
                         entityPendingTransactionIndices[numberOfEntityPendingTransactionIndices] = numberOfEntityPendingTransactionIndices;
@@ -2646,7 +2646,7 @@ static void processTick(unsigned long long processorNumber)
                         }
 
                         entityPendingTransactionIndices[index] = entityPendingTransactionIndices[--numberOfEntityPendingTransactionIndices];
-                    }
+                    }*/
 
                     for (; j < NUMBER_OF_TRANSACTIONS_PER_TICK; j++)
                     {
