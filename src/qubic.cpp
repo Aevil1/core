@@ -104,6 +104,7 @@ static volatile bool systemMustBeSaved = false, spectrumMustBeSaved = false, uni
 
 static int misalignedState = 0;
 static int debugTP = 0;
+static unsigned long long totalPTTick = 0;
 static volatile unsigned char epochTransitionState = 0;
 static volatile unsigned char epochTransitionCleanMemoryFlag = 1;
 static volatile long epochTransitionWaitingRequestProcessors = 0;
@@ -2363,6 +2364,7 @@ static void processTickTransaction(const Transaction* transaction, const m256i& 
 #pragma optimize("", off)
 static void processTick(unsigned long long processorNumber)
 {
+    unsigned long long PTStartTick = __rdtsc();
     if (system.tick > system.initialTick)
     {
         etalonTick.prevResourceTestingDigest = resourceTestingDigest;
@@ -2832,6 +2834,7 @@ static void processTick(unsigned long long processorNumber)
     if ((system.tick & 7) == 0)
         updateAndAnalzeEntityCategoryPopulations();
     logger.updateTick(system.tick);
+    totalPTTick = __rdtsc() - PTStartTick;
 }
 
 #pragma optimize("", on)
@@ -6122,7 +6125,9 @@ static void logInfo()
     appendNumber(message, solutionTotalExecutionTicks * 1000 / frequency, TRUE);
     appendText(message, L" ms | Spectrum reorg time = ");
     appendNumber(message, spectrumReorgTotalExecutionTicks * 1000 / frequency, TRUE);
-    appendText(message, L" ms.");
+    appendText(message, L" ms | tickProcess time = ");
+    appendNumber(message, totalPTTick * 1000 / frequency, TRUE);
+    appendText(message, L" ms");
     logToConsole(message);
 }
 
