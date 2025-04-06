@@ -2361,7 +2361,7 @@ static void processTickTransaction(const Transaction* transaction, const m256i& 
     }
 }
 
-
+#pragma optimize("", off)
 static void processTick(unsigned long long processorNumber)
 {
     unsigned long long PTStartTick = __rdtsc();
@@ -2836,7 +2836,7 @@ static void processTick(unsigned long long processorNumber)
     logger.updateTick(system.tick);
     totalPTTick = __rdtsc() - PTStartTick;
 }
-
+#pragma optimize("", on)
 
 static void beginEpoch()
 {
