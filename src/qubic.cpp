@@ -103,7 +103,7 @@ static volatile char criticalSituation = 0;
 static volatile bool systemMustBeSaved = false, spectrumMustBeSaved = false, universeMustBeSaved = false, computerMustBeSaved = false;
 
 static int misalignedState = 0;
-
+static int debugTP = 0;
 static volatile unsigned char epochTransitionState = 0;
 static volatile unsigned char epochTransitionCleanMemoryFlag = 1;
 static volatile long epochTransitionWaitingRequestProcessors = 0;
@@ -4748,6 +4748,11 @@ static void broadcastTickVotes()
         // - if own votes don't get echoed back, that indicates this node has internet/topo issue, and need to reissue vote (F9)
         // - all votes need to be processed in a single place of code (for further handling)
         // - all votes are treated equally (own votes and their votes)
+        ts.ticks.acquireLock(broadcastTick.tick.computorIndex);
+        Tick* tsTick = ts.ticks.getByTickInCurrentEpoch(broadcastTick.tick.tick) + broadcastTick.tick.computorIndex;
+        // Copy the sent tick to the tick storage
+        bs->CopyMem(tsTick, &broadcastTick.tick, sizeof(Tick));
+        ts.ticks.releaseLock(broadcastTick.tick.computorIndex);
     }
 }
 
@@ -4917,7 +4922,7 @@ static void tickProcessor(void*)
             const unsigned int nextTickIndex = ts.tickToIndexCurrentEpoch(nextTick);
 
             updateFutureTickCount();
-
+            
             if (system.tick > latestProcessedTick)
             {
                 // State persist: if it can reach to this point that means we already have all necessary data to process tick `system.tick`
@@ -4928,7 +4933,9 @@ static void tickProcessor(void*)
                     while (requestPersistingNodeState) _mm_pause();
                     persistingNodeStateTickProcWaiting = 0;
                 }
+                debugTP = 2;
                 processTick(processorNumber);
+                debugTP = 3;
                 latestProcessedTick = system.tick;
             }
 
@@ -5043,6 +5050,7 @@ static void tickProcessor(void*)
                 // Here only need to update the stats and rerun the loop again
                 gTickNumberOfComputors = 0;
                 gTickTotalNumberOfComputors = countCurrentTickVote();
+                debugTP = 4;
             }
             else
             {
@@ -5088,6 +5096,7 @@ static void tickProcessor(void*)
                 if (numberOfKnownNextTickTransactions != numberOfNextTickTransactions)
                 {
                     requestedTickTransactions.requestedTickTransactions.tick = nextTick;
+                    debugTP = 5;
                 }
                 else
                 {
@@ -5325,8 +5334,21 @@ static void tickProcessor(void*)
                                     tickTicks[i] = tickTicks[i + 1];
                                 }
                                 tickTicks[sizeof(tickTicks) / sizeof(tickTicks[0]) - 1] = __rdtsc();
+                                debugTP = 0;
+                            }
+                            else
+                            {
+                                debugTP = 6;
                             }
                         }
+                        else
+                        {
+                            debugTP = 7;
+                        }
+                    }
+                    else
+                    {
+                        debugTP = 8;
                     }
                 }
             }
@@ -5918,7 +5940,9 @@ static void logInfo()
     appendNumber(message, numberOfDuplicateRequests - prevNumberOfDuplicateRequests, TRUE);
     appendText(message, L" /");
     appendNumber(message, numberOfDisseminatedRequests - prevNumberOfDisseminatedRequests, TRUE);
-    appendText(message, L"] ");
+    appendText(message, L"] - D");
+    appendNumber(message, debugTP, TRUE);
+    appendText(message, L" - ");
 
     unsigned int numberOfConnectingSlots = 0, numberOfConnectedSlots = 0;
     for (unsigned int i = 0; i < NUMBER_OF_OUTGOING_CONNECTIONS + NUMBER_OF_INCOMING_CONNECTIONS; i++)
