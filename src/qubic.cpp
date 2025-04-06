@@ -5978,6 +5978,9 @@ static void logInfo()
     appendNumber(message, score->scoreCache.collisionCount(), TRUE);
     appendText(message, L" | Miss ");
     appendNumber(message, score->scoreCache.missCount(), TRUE);
+    appendText(message, L" | tickProcess time = ");
+    appendNumber(message, totalPTTick * 1000 / frequency, TRUE);
+    appendText(message, L" ms");
 #endif
     logToConsole(message);
     prevNumberOfProcessedRequests = numberOfProcessedRequests;
@@ -6119,8 +6122,6 @@ static void logInfo()
     appendNumber(message, solutionTotalExecutionTicks * 1000 / frequency, TRUE);
     appendText(message, L" ms | Spectrum reorg time = ");
     appendNumber(message, spectrumReorgTotalExecutionTicks * 1000 / frequency, TRUE);
-    appendText(message, L" ms | tickProcess time = ");
-    appendNumber(message, totalPTTick * 1000 / frequency, TRUE);
     appendText(message, L" ms");
     logToConsole(message);
 }
