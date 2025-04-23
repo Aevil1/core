@@ -1480,12 +1480,15 @@ static void updateNumberOfTickTransactions()
 #pragma optimize("", off)
 static void requestProcessor(void* ProcedureArgument)
 {
+    addDebugMessage(L"requestProcessor 1");
     enableAVX();
+    addDebugMessage(L"requestProcessor 2");
 
     const unsigned long long processorNumber = getRunningProcessorID();
 
     Processor* processor = (Processor*)ProcedureArgument;
     RequestResponseHeader* header = (RequestResponseHeader*)processor->buffer;
+    addDebugMessage(L"requestProcessor 3");
     while (!shutDownNode)
     {
         checkinTime(processorNumber);
@@ -4839,7 +4842,9 @@ static bool isTickTimeOut()
 
 static void tickProcessor(void*)
 {
+    addDebugMessage(L"tickProcessor 1");
     enableAVX();
+    addDebugMessage(L"tickProcessor 2");
     const unsigned long long processorNumber = getRunningProcessorID();
 
 #if !START_NETWORK_FROM_SCRATCH
@@ -4852,6 +4857,7 @@ static void tickProcessor(void*)
 
     loadAllNodeStateFromFile = false;
     unsigned int latestProcessedTick = 0;
+    addDebugMessage(L"tickProcessor 3");
     while (!shutDownNode)
     {
         checkinTime(processorNumber);
