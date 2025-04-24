@@ -1109,9 +1109,19 @@ protected:
 	{
 		if ((div((state._earnedAmount - state._distributedAmount), 676ULL) > 0) && (state._earnedAmount > state._distributedAmount))
 		{
-			if (qpi.distributeDividends(div((state._earnedAmount - state._distributedAmount), 676ULL)))
+			if (qpi.tick() & 1)
 			{
-				state._distributedAmount += div((state._earnedAmount - state._distributedAmount), 676ULL) * NUMBER_OF_COMPUTORS;
+				if (qpi.distributeDividends2(div((state._earnedAmount - state._distributedAmount), 676ULL)))
+				{
+					state._distributedAmount += div((state._earnedAmount - state._distributedAmount), 676ULL) * NUMBER_OF_COMPUTORS;
+				}
+			}
+			else
+			{
+				if (qpi.distributeDividends(div((state._earnedAmount - state._distributedAmount), 676ULL)))
+				{
+					state._distributedAmount += div((state._earnedAmount - state._distributedAmount), 676ULL) * NUMBER_OF_COMPUTORS;
+				}
 			}
 		}
 	}
