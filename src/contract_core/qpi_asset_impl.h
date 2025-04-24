@@ -543,6 +543,71 @@ bool QPI::QpiContextProcedureCall::distributeDividends(long long amountPerShare)
 }
 
 
+bool QPI::QpiContextProcedureCall::distributeDividends2(long long amountPerShare) const
+{
+    if (contractCallbacksRunning & ContractCallbackPostIncomingTransfer)
+    {
+        return false;
+    }
+
+    if (amountPerShare < 0 || amountPerShare * NUMBER_OF_COMPUTORS > MAX_AMOUNT)
+    {
+        return false;
+    }
+
+    const int index = spectrumIndex(_currentContractId);
+
+    if (index < 0)
+    {
+        return false;
+    }
+
+    const long long remainingAmount = energy(index) - amountPerShare * NUMBER_OF_COMPUTORS;
+
+    if (remainingAmount < 0)
+    {
+        return false;
+    }
+
+    if (decreaseEnergy(index, amountPerShare * NUMBER_OF_COMPUTORS))
+    {
+        ACQUIRE(universeLock);
+
+        Asset asset(id::zero(), *((unsigned long long*)contractDescriptions[_currentContractIndex].assetName));
+        AssetPossessionIterator iter(asset);
+        long long totalShareCounter = 0;
+
+        while (!iter.reachedEnd())
+        {
+            ASSERT(iter.possessionIndex() < ASSETS_CAPACITY);
+
+            const auto& possession = assets[iter.possessionIndex()].varStruct.possession;
+            const long long dividend = amountPerShare * possession.numberOfShares;
+
+            increaseEnergy(possession.publicKey, dividend);
+
+            if (!contractActionTracker.addQuTransfer(_currentContractId, possession.publicKey, dividend))
+                __qpiAbort(ContractErrorTooManyActions);
+
+            __qpiNotifyPostIncomingTransfer(_currentContractId, possession.publicKey, dividend, TransferType::qpiDistributeDividends);
+
+            const QuTransfer quTransfer = { _currentContractId, possession.publicKey, dividend };
+            logger.logQuTransfer(quTransfer);
+
+            totalShareCounter += possession.numberOfShares;
+
+            iter.next();
+        }
+
+        ASSERT(totalShareCounter == NUMBER_OF_COMPUTORS || totalShareCounter == 0);
+
+        RELEASE(universeLock);
+    }
+
+    return true;
+}
+
+
 long long QPI::QpiContextProcedureCall::issueAsset(unsigned long long name, const QPI::id& issuer, signed char numberOfDecimalPlaces, long long numberOfShares, unsigned long long unitOfMeasurement) const
 {
     if (((unsigned char)name) < 'A' || ((unsigned char)name) > 'Z'

@@ -1484,6 +1484,10 @@ namespace QPI
 			sint64 amountPerShare // Total amount will be 676x of this
 		) const; // "true" if the contract has had enough qus, "false" otherwise
 
+		inline bool distributeDividends2( //  Attempts to pay dividends
+			sint64 amountPerShare // Total amount will be 676x of this
+		) const; // "true" if the contract has had enough qus, "false" otherwise
+
 		inline sint64 issueAsset(
 			uint64 name,
 			const id& issuer,
