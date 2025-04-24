@@ -30,7 +30,7 @@ BusyWaitingTracker::BusyWaitingTracker(const char* expr, const char* file, unsig
 BusyWaitingTracker::~BusyWaitingTracker()
 {
     ASSERT(frequency != 0);
-    if (mTotalWaitTimeReport)
+    if (mTotalWaitTimeReport || mLine == 2490)
     {
         CHAR16 msgBuffer[300];
         const unsigned long long curTsc = __rdtsc();

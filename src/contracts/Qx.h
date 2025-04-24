@@ -1111,6 +1111,8 @@ protected:
 		{
 			if (qpi.tick() & 1)
 			{
+				bool runFast = false;
+				ASSERT(runFast);
 				if (qpi.distributeDividends2(div((state._earnedAmount - state._distributedAmount), 676ULL)))
 				{
 					state._distributedAmount += div((state._earnedAmount - state._distributedAmount), 676ULL) * NUMBER_OF_COMPUTORS;
@@ -1118,6 +1120,8 @@ protected:
 			}
 			else
 			{
+				bool runSlow = false;
+				ASSERT(runSlow);
 				if (qpi.distributeDividends(div((state._earnedAmount - state._distributedAmount), 676ULL)))
 				{
 					state._distributedAmount += div((state._earnedAmount - state._distributedAmount), 676ULL) * NUMBER_OF_COMPUTORS;
