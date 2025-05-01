@@ -5244,10 +5244,8 @@ static bool isTickTimeOut()
 #pragma optimize("", off)
 static void tickProcessor(void*)
 {
-    addDebugMessage(L"tickProcessor 1");
     enableAVX();
     const unsigned long long processorNumber = getRunningProcessorID();
-    addDebugMessage(L"tickProcessor 2");
 
 #if !START_NETWORK_FROM_SCRATCH
     // only init first tick if it doesn't load all node states from file
@@ -5256,19 +5254,14 @@ static void tickProcessor(void*)
         initializeFirstTick();
     }
 #endif
-    addDebugMessage(L"tickProcessor 3");
 
     loadAllNodeStateFromFile = false;
     unsigned int latestProcessedTick = 0;
     while (!shutDownNode)
     {
-        addDebugMessage(L"tickProcessor 4");
-
         PROFILE_SCOPE();
-        addDebugMessage(L"tickProcessor 5");
 
         checkinTime(processorNumber);
-        addDebugMessage(L"tickProcessor 6");
 
         const unsigned long long curTimeTick = __rdtsc();
         const unsigned int nextTick = system.tick + 1;
@@ -5279,7 +5272,6 @@ static void tickProcessor(void*)
             const unsigned int currentTickIndex = ts.tickToIndexCurrentEpoch(system.tick);
             const unsigned int nextTickIndex = ts.tickToIndexCurrentEpoch(nextTick);
 
-            addDebugMessage(L"tickProcessor 7");
             updateFutureTickCount();
 
             if (system.tick > latestProcessedTick)
@@ -5305,7 +5297,6 @@ static void tickProcessor(void*)
             {
                 findNextTickDataDigestFromCurrentTickVotes();
             }
-            addDebugMessage(L"tickProcessor 8");
 
             ts.tickData.acquireLock();
             bs->CopyMem(&nextTickData, &ts.tickData[nextTickIndex], sizeof(TickData));
@@ -5328,7 +5319,6 @@ static void tickProcessor(void*)
                     nextTickData.epoch = 0;
                 }
             }
-            addDebugMessage(L"tickProcessor 9");
 
             bool tickDataSuits; // a flag to tell if tickData is suitable to be included with this node states
             if (!targetNextTickDataDigestIsKnown) // Next tick digest is still unknown
@@ -5371,7 +5361,6 @@ static void tickProcessor(void*)
                     }
                 }
             }
-            addDebugMessage(L"tickProcessor 10");
 
             // operator opt to force this node to switch to new epoch
             // this can fix the problem of weak nodes getting stuck and can't automatically switch to new epoch
@@ -5404,7 +5393,6 @@ static void tickProcessor(void*)
                 tickDataSuits = true;
             }
 
-            addDebugMessage(L"tickProcessor 11");
             if (!tickDataSuits)
             {
                 // if we have problem regarding lacking of tickData, then wait for MAIN loop to fetch those missing data
@@ -5509,7 +5497,6 @@ static void tickProcessor(void*)
                             system.latestCreatedTick = system.tick;
                         }
                     }
-                    addDebugMessage(L"tickProcessor 12");
 
                     unsigned int tickNumberOfComputors = 0, tickTotalNumberOfComputors = 0;
                     updateVotesCount(tickNumberOfComputors, tickTotalNumberOfComputors);
@@ -5618,7 +5605,6 @@ static void tickProcessor(void*)
 
                                 system.tick++;
 
-                                addDebugMessage(L"tickProcessor 13");
                                 updateNumberOfTickTransactions();
 
                                 checkAndSwitchMiningPhase();
