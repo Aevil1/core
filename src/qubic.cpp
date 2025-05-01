@@ -5241,6 +5241,7 @@ static bool isTickTimeOut()
     return (__rdtsc() - tickTicks[sizeof(tickTicks) / sizeof(tickTicks[0]) - 1] > TARGET_TICK_DURATION * NEXT_TICK_TIMEOUT_THRESHOLD * frequency / 1000);
 }
 
+#pragma optimize("", off)
 static void tickProcessor(void*)
 {
     addDebugMessage(L"tickProcessor 1");
@@ -5695,6 +5696,7 @@ static void tickProcessor(void*)
         tickerLoopDenominator++;
     }
 }
+#pragma optimize("", on)
 
 static void emptyCallback(EFI_EVENT Event, void* Context)
 {
