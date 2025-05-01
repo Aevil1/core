@@ -4345,6 +4345,8 @@ static bool invalidateNodeStates(CHAR16* directory)
 // can only called from main thread
 static bool saveAllNodeStates()
 {
+    PROFILE_SCOPE();
+
     CHAR16 directory[16];
     setText(directory, L"ep");
     appendNumber(directory, system.epoch, false);
@@ -7239,6 +7241,7 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable)
                 {
                     clockTick = curTimeTick;
 
+                    PROFILE_NAMED_SCOPE("main loop: updateTime()");
                     updateTime();
                 }
 
