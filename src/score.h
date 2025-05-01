@@ -628,7 +628,7 @@ struct ScoreFunction
         unsigned char* curCachedNeurons,
         computeBuffer::Neuron& neurons32)
     {
-        PROFILE_SCOPE();
+        //PROFILE_SCOPE();
         long long tick = tickOffset;
         for (int k = 0; k < batchSize; k++, tick++)
         {
@@ -662,7 +662,7 @@ struct ScoreFunction
         unsigned char* curCachedNeurons,
         computeBuffer::Neuron& neurons32)
     {
-        PROFILE_SCOPE();
+        //PROFILE_SCOPE();
 #if defined (__AVX512F__)
         __m512i supplierNeuronIndex = _mm512_cvtepu16_epi32(_mm256_loadu_si256((__m256i*)(pNeuronSupplier + batch)));
         __m512i neuronIndex = _mm512_cvtepu16_epi32(_mm256_loadu_si256((__m256i*)(pNeuronIdices + batch)));
@@ -764,7 +764,7 @@ struct ScoreFunction
         const unsigned char* batches,
         computeBuffer::Neuron& neurons32)
     {
-        PROFILE_SCOPE();
+        //PROFILE_SCOPE();
         setMem(neurons32.input, sizeof(neurons32.input[0]) * allNeuronsCount, 0);
         for (int i = 0; i < dataLength; i++)
         {
@@ -818,7 +818,7 @@ struct ScoreFunction
         unsigned char* batches,
         computeBuffer::Neuron& neurons32)
     {
-        PROFILE_SCOPE();
+        //PROFILE_SCOPE();
         return computeNeurons<true>(pNeuronIdices, pNeuronSupplier, skipTicksMap, curCachedNeurons, batches, neurons32);
     }
 
