@@ -63,6 +63,10 @@ public:
         // Init time stamp counter frequency if needed
         if (!frequency)
             initTimeStampCounter();
+#else
+        // Discard measurement if made before init of time stamp counter
+        if (!frequency)
+            return;
 #endif
 
         ACQUIRE_WITHOUT_DEBUG_LOGGING(mLock);
