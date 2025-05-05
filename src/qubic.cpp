@@ -2232,6 +2232,10 @@ static void contractProcessor(void*)
     }
     break;
     }
+
+    // Set state to inactive, signaling end of contractProcessor() execution before contractProcessorShutdownCallback()
+    // for reducing waiting time in tick processor.
+    contractProcessorState = 0;
 }
 
 // Notify dest of incoming transfer if dest is a contract.
@@ -5115,11 +5119,14 @@ static void shutdownCallback(EFI_EVENT Event, void* Context)
     closeEvent(Event);
 }
 
+// Required on timeout of callback processor
 static void contractProcessorShutdownCallback(EFI_EVENT Event, void* Context)
 {
     closeEvent(Event);
 
-    contractProcessorState = 0;
+    // Timeout is disabled so far, because timeout recovery is not implemented yet.
+    // So `contractProcessorState = 0` has been moved to test if this would speed up things.
+    //contractProcessorState = 0;
 }
 
 // directory: source directory to load the file. Default: NULL - load from root dir /
