@@ -154,6 +154,11 @@ static unsigned char contractProcessorPostIncomingTransferType = 0;
 static EFI_EVENT contractProcessorEvent;
 static m256i contractStateDigests[MAX_NUMBER_OF_CONTRACTS * 2 - 1];
 const unsigned long long contractStateDigestsSizeInBytes = sizeof(contractStateDigests);
+PROFILE_STOPWATCH_DEF(contractProcessorStartupMainLoopDelay, "contract processor startup: main loop delay (between start in tick processor and start in main loop)");
+PROFILE_STOPWATCH_DEF(contractProcessorStartupEfiDelay, "contract processor startup: StartupThisAP()");
+PROFILE_STOPWATCH_DEF(contractProcessorShutdownEfiEventDelay, "contract processor shutdown: delay until shutdown event is processed");
+PROFILE_STOPWATCH_DEF(contractProcessorShutdownDelayUntilContinue, "contract processor shutdown: delay untilo in tick processor");
+
 
 // targetNextTickDataDigestIsKnown == true signals that we need to fetch TickData (update the version in this node)
 // targetNextTickDataDigestIsKnown == false means there is no consensus on next tick data yet
@@ -2057,6 +2062,7 @@ static void contractProcessor(void*)
 {
     enableAVX();
 
+    PROFILE_STOPWATCH_STOP(contractProcessorStartupEfiDelay);
     PROFILE_SCOPE();
 
     const unsigned long long processorNumber = getRunningProcessorID();
@@ -2195,6 +2201,19 @@ static void contractProcessor(void*)
     // Set state to inactive, signaling end of contractProcessor() execution before contractProcessorShutdownCallback()
     // for reducing waiting time in tick processor.
     contractProcessorState = 0;
+
+    PROFILE_STOPWATCH_START(contractProcessorShutdownDelayUntilContinue);
+    PROFILE_STOPWATCH_START(contractProcessorShutdownEfiEventDelay);
+}
+
+// Run contract with contract processor, waiting for completion. Should be only called from tick processor.
+// This signals the main to start the contract processor and waits until it is finished ("joined").
+static void runContractProcessor()
+{
+    contractProcessorState = 1;
+    PROFILE_STOPWATCH_START(contractProcessorStartupMainLoopDelay);
+    WAIT_WHILE(contractProcessorState);
+    PROFILE_STOPWATCH_STOP(contractProcessorShutdownDelayUntilContinue);
 }
 
 // Notify dest of incoming transfer if dest is a contract.
@@ -2224,8 +2243,7 @@ static void notifyContractOfIncomingTransfer(const m256i& source, const m256i& d
     contractProcessorTransaction = &tx;
     contractProcessorPostIncomingTransferType = type;
     contractProcessorPhase = POST_INCOMING_TRANSFER;
-    contractProcessorState = 1;
-    WAIT_WHILE(contractProcessorState);
+    runContractProcessor();
 }
 
 
@@ -2269,8 +2287,7 @@ static bool processTickTransactionContractProcedure(const Transaction* transacti
         contractProcessorTransaction = transaction;
         contractProcessorPostIncomingTransferType = QPI::TransferType::procedureTransaction;
         contractProcessorPhase = USER_PROCEDURE_CALL;
-        contractProcessorState = 1;
-        WAIT_WHILE(contractProcessorState);
+        runContractProcessor();
 
         return contractProcessorTransactionMoneyflew;
     }
@@ -2281,8 +2298,7 @@ static bool processTickTransactionContractProcedure(const Transaction* transacti
         contractProcessorTransaction = transaction;
         contractProcessorPostIncomingTransferType = QPI::TransferType::standardTransaction;
         contractProcessorPhase = POST_INCOMING_TRANSFER;
-        contractProcessorState = 1;
-        WAIT_WHILE(contractProcessorState);
+        runContractProcessor();
     }
 
     // if transaction tries to invoke non-registered procedure, transaction amount is not reimbursed
@@ -2728,23 +2744,20 @@ static void processTick(unsigned long long processorNumber)
         PROFILE_NAMED_SCOPE_BEGIN("processTick(): INITIALIZE");
         logger.registerNewTx(system.tick, logger.SC_INITIALIZE_TX);
         contractProcessorPhase = INITIALIZE;
-        contractProcessorState = 1;
-        WAIT_WHILE(contractProcessorState);
+        runContractProcessor();
         PROFILE_SCOPE_END();
 
         PROFILE_NAMED_SCOPE_BEGIN("processTick(): BEGIN_EPOCH");
         logger.registerNewTx(system.tick, logger.SC_BEGIN_EPOCH_TX);
         contractProcessorPhase = BEGIN_EPOCH;
-        contractProcessorState = 1;
-        WAIT_WHILE(contractProcessorState);
+        runContractProcessor();
         PROFILE_SCOPE_END();
     }
 
     PROFILE_NAMED_SCOPE_BEGIN("processTick(): BEGIN_TICK");
     logger.registerNewTx(system.tick, logger.SC_BEGIN_TICK_TX);
     contractProcessorPhase = BEGIN_TICK;
-    contractProcessorState = 1;
-    WAIT_WHILE(contractProcessorState);
+    runContractProcessor();
     PROFILE_SCOPE_END();
 
     unsigned int tickIndex = ts.tickToIndexCurrentEpoch(system.tick);
@@ -2839,8 +2852,7 @@ static void processTick(unsigned long long processorNumber)
     PROFILE_NAMED_SCOPE_BEGIN("processTick(): END_TICK");
     logger.registerNewTx(system.tick, logger.SC_END_TICK_TX);
     contractProcessorPhase = END_TICK;
-    contractProcessorState = 1;
-    WAIT_WHILE(contractProcessorState);
+    runContractProcessor();
     PROFILE_SCOPE_END();
 
     PROFILE_NAMED_SCOPE_BEGIN("processTick(): get spectrum digest");
@@ -3360,8 +3372,7 @@ static void endEpoch()
 {
     logger.registerNewTx(system.tick, logger.SC_END_EPOCH_TX);
     contractProcessorPhase = END_EPOCH;
-    contractProcessorState = 1;
-    WAIT_WHILE(contractProcessorState);
+    runContractProcessor();
 
     // treating endEpoch as a tick, start updating etalonTick:
     // this is the last tick of an epoch, should we set prevResourceTestingDigest to zero? nodes that start from scratch (for the new epoch)
@@ -5737,6 +5748,8 @@ static void contractProcessorShutdownCallback(EFI_EVENT Event, void* Context)
 {
     bs->CloseEvent(Event);
 
+    PROFILE_STOPWATCH_STOP(contractProcessorShutdownEfiEventDelay);
+
     // Timeout is disabled so far, because timeout recovery is not implemented yet.
     // So `contractProcessorState = 0` has been moved to test if this would speed up things.
     //contractProcessorState = 0;
@@ -7288,6 +7301,8 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable)
                 if (contractProcessorState == 1)
                 {
                     contractProcessorState = 2;
+                    PROFILE_STOPWATCH_STOP(contractProcessorStartupMainLoopDelay);
+                    PROFILE_STOPWATCH_START(contractProcessorStartupEfiDelay);
                     bs->CreateEvent(EVT_NOTIFY_SIGNAL, TPL_NOTIFY, contractProcessorShutdownCallback, NULL, &contractProcessorEvent);
                     mpServicesProtocol->StartupThisAP(mpServicesProtocol, Processor::runFunction, contractProcessorIDs[0], contractProcessorEvent, MAX_CONTRACT_ITERATION_DURATION * 1000, &processors[computingProcessorNumber], NULL);
                 }
