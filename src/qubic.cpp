@@ -2113,6 +2113,7 @@ static void requestProcessor(void* ProcedureArgument)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)
 static void contractProcessor(void*)
 {
     enableAVX();
@@ -2256,6 +2257,7 @@ static void contractProcessor(void*)
     PROFILE_STOPWATCH_START(contractProcessorShutdownDelayUntilContinue);
     PROFILE_STOPWATCH_START(contractProcessorShutdownEfiEventDelay);
 }
+#pragma optimize("", on)
 
 // Run contract with contract processor, waiting for completion. Should be only called from tick processor.
 // This signals the main to start the contract processor and waits until it is finished ("joined").
