@@ -763,6 +763,7 @@ static void processBroadcastMessage(const unsigned long long processorNumber, Re
     }
 }
 
+#pragma optimize("", off)
 static void processBroadcastComputors(Peer* peer, RequestResponseHeader* header)
 {
     BroadcastComputors* request = header->getPayload<BroadcastComputors>();
@@ -818,6 +819,7 @@ static void processBroadcastComputors(Peer* peer, RequestResponseHeader* header)
         }
     }
 }
+#pragma optimize("", on)
 
 static bool verifyTickVoteSignature(const unsigned char* publicKey, const unsigned char* messageDigest, const unsigned char* signature, const bool curveVerify = true)
 {
