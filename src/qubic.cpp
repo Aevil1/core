@@ -2273,6 +2273,7 @@ static void runContractProcessor()
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)
 // Notify dest of incoming transfer if dest is a contract.
 // CAUTION: Cannot be called from contract processor or main processor! If called from QPI functions, it will get stuck.
 static void notifyContractOfIncomingTransfer(const m256i& source, const m256i& dest, long long amount, unsigned char type)
@@ -2756,6 +2757,7 @@ static void processTickTransaction(const Transaction* transaction, const m256i& 
 #endif
     }
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)
 static void processTick(unsigned long long processorNumber)
@@ -3298,6 +3300,7 @@ static void processTick(unsigned long long processorNumber)
 }
 
 #pragma optimize("", on)
+#pragma optimize("", off)
 
 static void resetCustomMining()
 {
@@ -4063,6 +4066,7 @@ static bool loadAllNodeStates()
 }
 
 #endif
+#pragma optimize("", on)
 
 #pragma optimize("", off)
 // Count the number of future tick vote (system.tick + 1) and then update it to gFutureTickTotalNumberOfComputors
@@ -5153,6 +5157,7 @@ static void contractProcessorShutdownCallback(EFI_EVENT Event, void* Context)
 }
 #pragma optimize("", on)
 
+#pragma optimize("", off)
 // directory: source directory to load the file. Default: NULL - load from root dir /
 // forceLoadFromFile: when loading node states from file, we want to make sure it load from file and ignore constructionEpoch == system.epoch case
 static bool loadComputer(CHAR16* directory, bool forceLoadFromFile)
@@ -6512,6 +6517,7 @@ static void processKeyPresses()
         }
     }
 }
+#pragma optimize("", on)
 
 #pragma optimize("", off)
 EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable)
