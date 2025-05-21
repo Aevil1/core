@@ -2261,6 +2261,7 @@ static void contractProcessor(void*)
 
 // Run contract with contract processor, waiting for completion. Should be only called from tick processor.
 // This signals the main to start the contract processor and waits until it is finished ("joined").
+#pragma optimize("", off)
 static void runContractProcessor()
 {
     contractProcessorState = 1;
@@ -2268,6 +2269,7 @@ static void runContractProcessor()
     WAIT_WHILE(contractProcessorState);
     PROFILE_STOPWATCH_STOP(contractProcessorShutdownDelayUntilContinue);
 }
+#pragma optimize("", on)
 
 // Notify dest of incoming transfer if dest is a contract.
 // CAUTION: Cannot be called from contract processor or main processor! If called from QPI functions, it will get stuck.
@@ -5137,6 +5139,7 @@ static void shutdownCallback(EFI_EVENT Event, void* Context)
     closeEvent(Event);
 }
 
+#pragma optimize("", off)
 static void contractProcessorShutdownCallback(EFI_EVENT Event, void* Context)
 {
     closeEvent(Event);
@@ -5144,6 +5147,7 @@ static void contractProcessorShutdownCallback(EFI_EVENT Event, void* Context)
     contractProcessorState = 0;
     PROFILE_STOPWATCH_STOP(contractProcessorShutdownEfiEventDelay);
 }
+#pragma optimize("", on)
 
 // directory: source directory to load the file. Default: NULL - load from root dir /
 // forceLoadFromFile: when loading node states from file, we want to make sure it load from file and ignore constructionEpoch == system.epoch case
@@ -6505,6 +6509,7 @@ static void processKeyPresses()
     }
 }
 
+#pragma optimize("", off)
 EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable)
 {
     ih = imageHandle;
@@ -7135,3 +7140,4 @@ EFI_STATUS efi_main(EFI_HANDLE imageHandle, EFI_SYSTEM_TABLE* systemTable)
 
     return EFI_SUCCESS;
 }
+#pragma optimize("", on)
