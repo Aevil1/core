@@ -4064,6 +4064,7 @@ static bool loadAllNodeStates()
 
 #endif
 
+#pragma optimize("", off)
 // Count the number of future tick vote (system.tick + 1) and then update it to gFutureTickTotalNumberOfComputors
 static void updateFutureTickCount()
 {
@@ -4683,6 +4684,7 @@ static bool isTickTimeOut()
 {
     return (__rdtsc() - tickTicks[sizeof(tickTicks) / sizeof(tickTicks[0]) - 1] > TARGET_TICK_DURATION * NEXT_TICK_TIMEOUT_THRESHOLD * frequency / 1000);
 }
+#pragma optimize("", on)
 
 // Disabling the optimizer for tickProcessor() is a workaround introduced to solve an issue
 // that has been observed in testnets/2025-04-30-profiling.
