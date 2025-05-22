@@ -6,8 +6,6 @@
 #include "time_stamp_counter.h"
 #include "file_io.h"
 
-#pragma optimize("", off)
-
 struct ProfilingData
 {
     const char* name;
@@ -369,7 +367,6 @@ protected:
     unsigned long long mStartTsc;
 };
 
-#pragma optimize("", on)
 
 
 #ifdef ENABLE_PROFILING
