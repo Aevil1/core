@@ -376,8 +376,6 @@ protected:
 #define PROFILE_NAMED_SCOPE_BEGIN(name) { PROFILE_NAMED_SCOPE(name)
 #define PROFILE_SCOPE_END() }
 #define PROFILE_STOPWATCH_DEF(objectName, descriptiveNameString) ProfilingStopwatch objectName(descriptiveNameString, __LINE__)
-#define PROFILE_STOPWATCH_START(objectName) objectName.start();
-#define PROFILE_STOPWATCH_STOP(objectName) objectName.stop();
 #else
 #define PROFILE_SCOPE()
 #define PROFILE_NAMED_SCOPE(name)
@@ -385,6 +383,6 @@ protected:
 #define PROFILE_NAMED_SCOPE_BEGIN(name) {
 #define PROFILE_SCOPE_END() }
 #define PROFILE_STOPWATCH_DEF(objectName, descriptiveNameString)
+#endif
 #define PROFILE_STOPWATCH_START(objectName)
 #define PROFILE_STOPWATCH_STOP(objectName)
-#endif
