@@ -4992,7 +4992,8 @@ static void tickProcessor(void*)
                                     epochTransitionState = 2;
 
                                     beginEpoch();
-                                    setNewMiningSeed();
+                                    checkAndSwitchMiningPhase();
+                                    checkAndSwitchCustomMiningPhase();
 
                                     // Some debug checks that we are ready for the next epoch
                                     ASSERT(system.numberOfSolutions == 0);
@@ -5434,7 +5435,8 @@ static bool initialize()
     }
     else
     {
-        setNewMiningSeed();
+        checkAndSwitchMiningPhase();
+        checkAndSwitchCustomMiningPhase();
     }    
     score->loadScoreCache(system.epoch);
 

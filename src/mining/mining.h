@@ -231,7 +231,7 @@ public:
             if (!transaction->amount
                 && transaction->inputSize == CUSTOM_MINING_SHARES_COUNT_SIZE_IN_BYTES + sizeof(m256i))
             {
-                m256i txDataLock = m256i(transaction->inputPtr() + VOTE_COUNTER_DATA_SIZE_IN_BYTES);
+                m256i txDataLock = m256i(transaction->inputPtr() + CUSTOM_MINING_SHARES_COUNT_SIZE_IN_BYTES);
                 if (txDataLock == dataLock)
                 {
                     addShares(transaction->inputPtr(), computorIndex);
