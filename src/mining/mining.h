@@ -155,7 +155,7 @@ public:
     {
         for (int i = 0; i < NUMBER_OF_COMPUTORS; i++)
         {
-            if (_shareCount[i] == 0)
+            if (_shareCount[i] != 0)
             {
                 return false;
             }
