@@ -807,9 +807,9 @@ public:
 
             TickData* td = tickDataPtr + index;
             // td->epoch == 0: not yet received or temporarily disabled
-            // td->epoch == INVALIDATED_TICK_DATA: invalidated by this node
-            // in both cases, this data shouldn't be sent out
-            if (td->epoch == 0 || td->epoch == INVALIDATED_TICK_DATA)
+            // td->epoch == INVALIDATED_TICK_DATA: invalidated by this node | on testnet, return this for debug purpose
+            // in both cases, this data shouldn't be sent out            
+            if (td->epoch == 0)
                 return nullptr;
 
             return td;
