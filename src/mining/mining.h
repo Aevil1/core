@@ -151,11 +151,11 @@ public:
         copyMem(_shareCount, sharesCount, sizeof(_shareCount));
     }
 
-    bool isAllZeroes()
+    bool isEmptyPacket(const unsigned char* data) const
     {
-        for (int i = 0; i < NUMBER_OF_COMPUTORS; i++)
+        for (int i = 0; i < CUSTOM_MINING_SHARES_COUNT_SIZE_IN_BYTES; i++)
         {
-            if (_shareCount[i] != 0)
+            if (data[i] != 0)
             {
                 return false;
             }
