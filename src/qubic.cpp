@@ -2752,7 +2752,7 @@ static void makeAndBroadcastTickVotesTransaction(int i, BroadcastFutureTickData&
     }
 }
 
-static void makeAndBroadcastCustomMiningTransaction(int i, BroadcastFutureTickData& td, int txSlot)
+static bool makeAndBroadcastCustomMiningTransaction(int i, BroadcastFutureTickData& td, int txSlot)
 {
     if (!gCustomMiningBroadcastTxBuffer[i].isBroadcasted)
     {
@@ -2786,7 +2786,9 @@ static void makeAndBroadcastCustomMiningTransaction(int i, BroadcastFutureTickDa
             }
             ts.tickTransactions.releaseLock();
         }
+        return true;
     }
+    return false;
 }
 
 #pragma optimize("", off)
@@ -3168,7 +3170,10 @@ static void processTick(unsigned long long processorNumber)
                     }
                     {
                         // insert & broadcast custom mining share
-                        makeAndBroadcastCustomMiningTransaction(i, broadcastedFutureTickData, j++);
+                        if (makeAndBroadcastCustomMiningTransaction(i, broadcastedFutureTickData, j)) // this type of tx is only broadcasted in mining phases
+                        {
+                            j++;
+                        }
                     }
 
                     for (; j < NUMBER_OF_TRANSACTIONS_PER_TICK; j++)
