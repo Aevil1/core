@@ -83,7 +83,7 @@ void random2(
 
 }
 
-
+#pragma optimize("", off)
 template <
     unsigned long long numberOfInputNeurons, // K
     unsigned long long numberOfOutputNeurons,// L
@@ -847,7 +847,7 @@ struct ScoreFunction
             return score;
         }
 
-    } *_computeBuffer = nullptr;
+    } _computeBuffer[solutionBufferCount];
     m256i currentRandomSeed;
 
     volatile char solutionEngineLock[solutionBufferCount];
@@ -876,11 +876,11 @@ struct ScoreFunction
 
     void freeMemory()
     {
-        if (_computeBuffer)
-        {
-            freePool(_computeBuffer);
-            _computeBuffer = nullptr;
-        }
+        //if (_computeBuffer)
+        //{
+        //    freePool(_computeBuffer);
+        //    _computeBuffer = nullptr;
+        //}
     }
 
     bool initMemory()
@@ -888,14 +888,14 @@ struct ScoreFunction
         random2PoolLock = 0;
         currentRandomSeed = m256i::zero();
 
-        if (_computeBuffer == nullptr)
-        {
-            if (!allocPoolWithErrorLog(L"computeBuffer (score solution buffer)", sizeof(computeBuffer) * solutionBufferCount, (void**)&_computeBuffer, __LINE__))
-            {
-                return false;
-            }
-            setMem(_computeBuffer, sizeof(computeBuffer) * solutionBufferCount, 0);
-        }
+        //if (_computeBuffer == nullptr)
+        //{
+        //    if (!allocPoolWithErrorLog(L"computeBuffer (score solution buffer)", sizeof(computeBuffer) * solutionBufferCount, (void**)&_computeBuffer, __LINE__))
+        //    {
+        //        return false;
+        //    }
+        //    setMem(_computeBuffer, sizeof(computeBuffer) * solutionBufferCount, 0);
+        //}
 
         for (int i = 0; i < solutionBufferCount; i++)
         {
@@ -1097,3 +1097,5 @@ struct ScoreFunction
         }
     }
 };
+
+#pragma optimize("", on)
