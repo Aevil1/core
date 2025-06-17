@@ -776,15 +776,17 @@ struct ScoreFunction
             initExpectedOutputNeuron();
 
             // Ticks simulation
-            runTickSimulation();
+            // runTickSimulation();
 
-            // Copy the state for rollback later
-            copyMem(&bestANN, &currentANN, sizeof(ANN));
+            //// Copy the state for rollback later
+            //copyMem(&bestANN, &currentANN, sizeof(ANN));
 
-            // Compute R and roll back if neccessary
-            unsigned int R = computeNonMatchingOutput();
+            //// Compute R and roll back if neccessary
+            //unsigned int R = computeNonMatchingOutput();
 
-            return R;
+            //return R;
+
+            return 32;
         }
 
         // Main function for mining
