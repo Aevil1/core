@@ -25,23 +25,23 @@ volatile char gRandom2PoolLock = 0;
 constexpr unsigned long long POOL_VEC_SIZE = (((1ULL << 32) + 64)) >> 3; // 2^32+64 bits ~ 512MB
 constexpr unsigned long long POOL_VEC_PADDING_SIZE = (POOL_VEC_SIZE + 200 - 1) / 200 * 200; // padding for multiple of 200
 static const char gLUT3States[] = { 0, 1, -1 };
+static unsigned char gState[200] = { 0 };
 
 void generateRandom2Pool(const unsigned char* miningSeed, unsigned char* pool)
 {
-    unsigned char state[200];
     // same pool to be used by all computors/candidates and pool content changing each phase
-    copyMem(&state[0], miningSeed, 32);
-    setMem(&state[32], sizeof(state) - 32, 0);
+    copyMem(&gState[0], miningSeed, 32);
+    setMem(&gState[32], sizeof(gState) - 32, 0);
 
-    for (unsigned int i = 0; i < POOL_VEC_PADDING_SIZE; i += sizeof(state))
+    for (unsigned int i = 0; i < POOL_VEC_PADDING_SIZE; i += sizeof(gState))
     {
-        KeccakP1600_Permute_12rounds(state);
-        copyMem(&pool[i], state, sizeof(state));
+        KeccakP1600_Permute_12rounds(gState);
+        copyMem(&pool[i], gState, sizeof(gState));
     }
 }
 
 void random2(
-    unsigned char seed[32],
+    unsigned char* seed,                // 32 bytes
     const unsigned char* pool,
     unsigned char* output,
     unsigned long long outputSizeInByte // Must divided by 64
@@ -187,6 +187,8 @@ struct ScoreFunction
         char outputNeuronExpectedValue[numberOfOutputNeurons];
 
         long long neuronValueBuffer[maxNumberOfNeurons];
+        unsigned char hash[32];
+        unsigned char combined[64];
 
         void mutate(unsigned long long mutateStep)
         {
@@ -732,8 +734,6 @@ struct ScoreFunction
 
         unsigned int initializeANN(const unsigned char* publicKey, const unsigned char* nonce, const unsigned char* pRandom2Pool)
         {
-            unsigned char hash[32];
-            unsigned char combined[64];
             copyMem(combined, publicKey, 32);
             copyMem(combined + 32, nonce, 32);
             KangarooTwelve(combined, 64, hash, 32);
