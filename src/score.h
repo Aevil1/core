@@ -798,10 +798,15 @@ struct ScoreFunction
             // Initialize
             unsigned int bestR = initializeANN(publicKey, nonce, pRandom2Pool);
 
+
+            CHAR16 message[64];
             addDebugMessage(L"initializeANN DONE");
 
             for (unsigned long long s = 0; s < numberOfMutations; ++s)
             {
+                setText(message, L"mutate ");
+                appendNumber(message, s, false);
+                addDebugMessage(message);
 
                 // Do the mutation
                 mutate(s);
@@ -835,7 +840,6 @@ struct ScoreFunction
 
             unsigned int score = numberOfOutputNeurons - bestR;
 
-            CHAR16 message[64];
             setText(message, L"ComputeScore DONE with score ");
             appendNumber(message, score, false);
             addDebugMessage(message);

@@ -20,7 +20,7 @@ static void printDebugMessages()
 
 #elif defined(NDEBUG)
 
-// static void addDebugMessage(const CHAR16* msg){} // empty impl
+ static void addDebugMessage(const CHAR16* msg){} // empty impl
 #else
 
 static CHAR16 debugMessage[128][16384];
