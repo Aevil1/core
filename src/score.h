@@ -793,38 +793,38 @@ struct ScoreFunction
             // Initialize
             unsigned int bestR = initializeANN(publicKey, nonce, pRandom2Pool);
 
-            for (unsigned long long s = 0; s < numberOfMutations; ++s)
-            {
+            //for (unsigned long long s = 0; s < numberOfMutations; ++s)
+            //{
 
-                // Do the mutation
-                mutate(s);
+            //    // Do the mutation
+            //    mutate(s);
 
-                // Exit if the number of population reaches the maximum allowed
-                if (currentANN.population >= populationThreshold)
-                {
-                    break;
-                }
+            //    // Exit if the number of population reaches the maximum allowed
+            //    if (currentANN.population >= populationThreshold)
+            //    {
+            //        break;
+            //    }
 
-                // Ticks simulation
-                runTickSimulation();
+            //    // Ticks simulation
+            //    runTickSimulation();
 
-                // Compute R and roll back if neccessary
-                unsigned int R = computeNonMatchingOutput();
-                if (R > bestR)
-                {
-                    // Roll back
-                    copyMem(&currentANN, &bestANN, sizeof(bestANN));
-                }
-                else
-                {
-                    bestR = R;
+            //    // Compute R and roll back if neccessary
+            //    unsigned int R = computeNonMatchingOutput();
+            //    if (R > bestR)
+            //    {
+            //        // Roll back
+            //        copyMem(&currentANN, &bestANN, sizeof(bestANN));
+            //    }
+            //    else
+            //    {
+            //        bestR = R;
 
-                    // Better R. Save the state
-                    copyMem(&bestANN, &currentANN, sizeof(bestANN));
-                }
+            //        // Better R. Save the state
+            //        copyMem(&bestANN, &currentANN, sizeof(bestANN));
+            //    }
 
-                ASSERT(bestANN.population <= populationThreshold);
-            }
+            //    ASSERT(bestANN.population <= populationThreshold);
+            //}
 
             unsigned int score = numberOfOutputNeurons - bestR;
             return score;
@@ -865,12 +865,6 @@ struct ScoreFunction
 
     bool initMemory()
     {
-<<<<<<< HEAD
-        random2PoolLock = 0;
-        currentRandomSeed = m256i::zero();
-
-=======
->>>>>>> ae4ac14 (a)
         setMem(_computeBuffer, sizeof(_computeBuffer), 0);
 
         for (int i = 0; i < solutionBufferCount; i++)
