@@ -316,59 +316,8 @@ struct ScoreFunction
             return nnIndex;
         }
 
-        void insertNeuron(unsigned long long synapseIdx)
+        void updateSynapseOfInsertedNN(unsigned long long insertedNeuronIdx)
         {
-            // A synapse have incomingNeighbor and outgoingNeuron, direction incomingNeuron -> outgoingNeuron
-            unsigned long long incomingNeighborSynapseIdx = synapseIdx % numberOfNeighbors;
-            unsigned long long outgoingNeuron = synapseIdx / numberOfNeighbors;
-
-            Synapse* synapses = currentANN.synapses;
-            Neuron* neurons = currentANN.neurons;
-            unsigned long long& population = currentANN.population;
-
-            // Copy original neuron to the inserted one and set it as  Neuron::kEvolution type
-            Neuron insertNeuron;
-            insertNeuron = neurons[outgoingNeuron];
-            insertNeuron.type = Neuron::kEvolution;
-            unsigned long long insertedNeuronIdx = outgoingNeuron + 1;
-
-            char originalWeight = synapses[synapseIdx].weight;
-
-            // Insert the neuron into array, population increased one, all neurons next to original one need to shift right
-            for (unsigned long long i = population; i > outgoingNeuron; --i)
-            {
-                neurons[i] = neurons[i - 1];
-
-                // Also shift the synapses to the right
-                copyMem(getSynapses(i), getSynapses(i - 1), numberOfNeighbors * sizeof(Synapse));
-            }
-            neurons[insertedNeuronIdx] = insertNeuron;
-            population++;
-
-            // Try to update the synapse of inserted neuron. All outgoing synapse is init as zero weight
-            Synapse* pInsertNeuronSynapse = getSynapses(insertedNeuronIdx);
-            for (unsigned long long synIdx = 0; synIdx < numberOfNeighbors; ++synIdx)
-            {
-                pInsertNeuronSynapse[synIdx].weight = 0;
-            }
-
-            // Copy the outgoing synapse of original neuron
-            // Outgoing points to the left
-            if (incomingNeighborSynapseIdx < numberOfNeighbors / 2)
-            {
-                if (incomingNeighborSynapseIdx > 0)
-                {
-                    // Decrease by one because the new neuron is next to the original one
-                    pInsertNeuronSynapse[incomingNeighborSynapseIdx - 1].weight = originalWeight;
-                }
-                // Incase of the outgoing synapse point too far, don't add the synapse
-            }
-            else
-            {
-                // No need to adjust the added neuron but need to remove the synapse of the original neuron
-                pInsertNeuronSynapse[incomingNeighborSynapseIdx].weight = originalWeight;
-            }
-
             // The change of synapse only impact neuron in [originalNeuronIdx - numberOfNeighbors / 2 + 1, originalNeuronIdx +  numberOfNeighbors / 2]
             // In the new index, it will be  [originalNeuronIdx + 1 - numberOfNeighbors / 2, originalNeuronIdx + 1 + numberOfNeighbors / 2]
             // [N0 N1 N2 original inserted N4 N5 N6], M = 2.
@@ -426,6 +375,62 @@ struct ScoreFunction
             }
         }
 
+        void insertNeuron(unsigned long long synapseIdx)
+        {
+            // A synapse have incomingNeighbor and outgoingNeuron, direction incomingNeuron -> outgoingNeuron
+            unsigned long long incomingNeighborSynapseIdx = synapseIdx % numberOfNeighbors;
+            unsigned long long outgoingNeuron = synapseIdx / numberOfNeighbors;
+
+            Synapse* synapses = currentANN.synapses;
+            Neuron* neurons = currentANN.neurons;
+            unsigned long long& population = currentANN.population;
+
+            // Copy original neuron to the inserted one and set it as  Neuron::kEvolution type
+            Neuron insertNeuron;
+            insertNeuron = neurons[outgoingNeuron];
+            insertNeuron.type = Neuron::kEvolution;
+            unsigned long long insertedNeuronIdx = outgoingNeuron + 1;
+
+            char originalWeight = synapses[synapseIdx].weight;
+
+            // Insert the neuron into array, population increased one, all neurons next to original one need to shift right
+            for (unsigned long long i = population; i > outgoingNeuron; --i)
+            {
+                neurons[i] = neurons[i - 1];
+
+                // Also shift the synapses to the right
+                copyMem(getSynapses(i), getSynapses(i - 1), numberOfNeighbors * sizeof(Synapse));
+            }
+            neurons[insertedNeuronIdx] = insertNeuron;
+            population++;
+
+            // Try to update the synapse of inserted neuron. All outgoing synapse is init as zero weight
+            Synapse* pInsertNeuronSynapse = getSynapses(insertedNeuronIdx);
+            for (unsigned long long synIdx = 0; synIdx < numberOfNeighbors; ++synIdx)
+            {
+                pInsertNeuronSynapse[synIdx].weight = 0;
+            }
+
+            // Copy the outgoing synapse of original neuron
+            // Outgoing points to the left
+            if (incomingNeighborSynapseIdx < numberOfNeighbors / 2)
+            {
+                if (incomingNeighborSynapseIdx > 0)
+                {
+                    // Decrease by one because the new neuron is next to the original one
+                    pInsertNeuronSynapse[incomingNeighborSynapseIdx - 1].weight = originalWeight;
+                }
+                // Incase of the outgoing synapse point too far, don't add the synapse
+            }
+            else
+            {
+                // No need to adjust the added neuron but need to remove the synapse of the original neuron
+                pInsertNeuronSynapse[incomingNeighborSynapseIdx].weight = originalWeight;
+            }
+
+            updateSynapseOfInsertedNN(insertedNeuronIdx);
+        }
+
         long long getIndexInSynapsesBuffer(unsigned long long neuronIdx, long long neighborOffset)
         {
             // Skip the case neuron point to itself and too far neighbor
@@ -445,6 +450,43 @@ struct ScoreFunction
             return synapseIdx;
         }
 
+        bool isAllOutgoingSynapsesZeros(unsigned long long neuronIdx)
+        {
+            Synapse* synapse = getSynapses(neuronIdx);
+            for (unsigned long long n = 0; n < numberOfNeighbors; n++)
+            {
+                char synapseW = synapse[n].weight;
+                if (synapseW != 0)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        bool isAllIncomingSynapsesZeros(unsigned long long neuronIdx)
+        {
+            // Loop through the neighbor neurons to check all incoming synapses
+            for (long long neighborOffset = -(long long)numberOfNeighbors / 2; neighborOffset <= (long long)numberOfNeighbors / 2; neighborOffset++)
+            {
+                unsigned long long nnIdx = clampNeuronIndex(neuronIdx, neighborOffset);
+                Synapse* nnSynapses = getSynapses(nnIdx);
+
+                long long synapseIdx = getIndexInSynapsesBuffer(nnIdx, -neighborOffset);
+                if (synapseIdx < 0)
+                {
+                    continue;
+                }
+                char synapseW = nnSynapses[synapseIdx].weight;
+
+                if (synapseW != 0)
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         // Check which neurons/synapse need to be removed after mutation
         unsigned long long scanRedundantNeurons()
         {
@@ -461,40 +503,7 @@ struct ScoreFunction
                 neurons[i].markForRemoval = false;
                 if (neurons[i].type == Neuron::kEvolution)
                 {
-                    bool allOutGoingZeros = true;
-                    bool allIncommingZeros = true;
-
-                    // Loop though its synapses for checkout outgoing synapses
-                    for (unsigned long long n = 0; n < numberOfNeighbors; n++)
-                    {
-                        char synapseW = synapses[i * numberOfNeighbors + n].weight;
-                        if (synapseW != 0)
-                        {
-                            allOutGoingZeros = false;
-                            break;
-                        }
-                    }
-
-                    // Loop through the neighbor neurons to check all incoming synapses
-                    for (long long neighborOffset = -(long long)numberOfNeighbors / 2; neighborOffset <= (long long)numberOfNeighbors / 2; neighborOffset++)
-                    {
-                        unsigned long long nnIdx = clampNeuronIndex(i, neighborOffset);
-                        Synapse* nnSynapses = getSynapses(nnIdx);
-
-                        long long synapseIdx = getIndexInSynapsesBuffer(nnIdx, -neighborOffset);
-                        if (synapseIdx < 0)
-                        {
-                            continue;
-                        }
-                        char synapseW = nnSynapses[synapseIdx].weight;
-
-                        if (synapseW != 0)
-                        {
-                            allIncommingZeros = false;
-                            break;
-                        }
-                    }
-                    if (allOutGoingZeros || allIncommingZeros)
+                    if (isAllOutgoingSynapsesZeros(i) || isAllIncomingSynapsesZeros(i))
                     {
                         neurons[i].markForRemoval = true;
                         numberOfRedundantNeurons++;
@@ -667,16 +676,46 @@ struct ScoreFunction
             }
         }
 
-        void initOutputNeuron()
+        void initNeuronValue()
         {
-            unsigned long long population = currentANN.population;
+            initInputNeuron();
+
+            // Starting value of output neuron is zero
             Neuron* neurons = currentANN.neurons;
+            unsigned long long population = currentANN.population;
             for (unsigned long long i = 0; i < population; ++i)
             {
                 if (neurons[i].type == Neuron::kOutput)
                 {
                     neurons[i].value = 0;
                 }
+            }
+        }
+
+        void initNeuronType()
+        {
+            unsigned long long population = currentANN.population;
+            Neuron* neurons = currentANN.neurons;
+            InitValue* initValue = (InitValue*)paddingInitValue;
+
+            // Randomly choose the positions of neurons types
+            for (unsigned long long i = 0; i < population; ++i)
+            {
+                neuronIndices[i] = i;
+                neurons[i].type = Neuron::kInput;
+            }
+            unsigned long long neuronCount = population;
+            for (unsigned long long i = 0; i < numberOfOutputNeurons; ++i)
+            {
+                unsigned long long outputNeuronIdx = initValue->outputNeuronPositions[i] % neuronCount;
+
+                // Fill the neuron type
+                neurons[neuronIndices[outputNeuronIdx]].type = Neuron::kOutput;
+                outputNeuronIndices[i] = neuronIndices[outputNeuronIdx];
+
+                // This index is used, copy the end of indices array to current position and decrease the number of picking neurons
+                neuronCount = neuronCount - 1;
+                neuronIndices[outputNeuronIdx] = neuronIndices[neuronCount];
             }
         }
 
@@ -715,26 +754,6 @@ struct ScoreFunction
             // Initialization
             population = numberOfNeurons;
 
-            // Randomly choose the positions of neurons types
-            for (unsigned long long i = 0; i < population; ++i)
-            {
-                neuronIndices[i] = i;
-                neurons[i].type = Neuron::kInput;
-            }
-            unsigned long long neuronCount = population;
-            for (unsigned long long i = 0; i < numberOfOutputNeurons; ++i)
-            {
-                unsigned long long outputNeuronIdx = initValue->outputNeuronPositions[i] % neuronCount;
-
-                // Fill the neuron type
-                neurons[neuronIndices[outputNeuronIdx]].type = Neuron::kOutput;
-                outputNeuronIndices[i] = neuronIndices[outputNeuronIdx];
-
-                // This index is used, copy the end of indices array to current position and decrease the number of picking neurons
-                neuronCount = neuronCount - 1;
-                neuronIndices[outputNeuronIdx] = neuronIndices[neuronCount];
-            }
-
             // Synapse weight initialization
             const unsigned long long initNumberOfSynapses = population * numberOfNeighbors;
             for (unsigned long long i = 0; i < initNumberOfSynapses; ++i)
@@ -742,9 +761,11 @@ struct ScoreFunction
                 synapses[i].weight = gLUT3States[initValue->synapseWeight[i] % 3];
             }
 
+            // Init the neuron type positions in ANN
+            initNeuronType();
+
             // Init input neuron value and output neuron
-            initInputNeuron();
-            initOutputNeuron();
+            initNeuronValue();
 
             // Init expected output neuron
             initExpectedOutputNeuron();
@@ -840,7 +861,6 @@ struct ScoreFunction
 
     bool initMemory()
     {
-        gRandom2PoolLock = 0;
         currentRandomSeed = m256i::zero();
 
         if (_computeBuffer == nullptr)
@@ -849,6 +869,7 @@ struct ScoreFunction
             {
                 return false;
             }
+            setMem(_computeBuffer, sizeof(computeBuffer) * solutionBufferCount, 0);
         }
 
         for (int i = 0; i < solutionBufferCount; i++)
