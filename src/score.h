@@ -782,11 +782,11 @@ struct ScoreFunction
             //copyMem(&bestANN, &currentANN, sizeof(ANN));
 
             //// Compute R and roll back if neccessary
-            //unsigned int R = computeNonMatchingOutput();
+            unsigned int R = computeNonMatchingOutput();
 
-            //return R;
+            return R;
 
-            return 32;
+            //return 32;
         }
 
         // Main function for mining
