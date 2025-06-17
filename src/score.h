@@ -746,6 +746,8 @@ struct ScoreFunction
                 copyMem((unsigned char*)&miningData, pRandom2Pool, sizeof(MiningData));
             }
 
+            addDebugMessage(L"initializeANN:Random2 DONE");
+
             unsigned long long& population = currentANN.population;
             Synapse* synapses = currentANN.synapses;
             Neuron* neurons = currentANN.neurons;
@@ -761,6 +763,8 @@ struct ScoreFunction
                 synapses[i].weight = gLUT3States[initValue->synapseWeight[i] % 3];
             }
 
+            addDebugMessage(L"initializeANN:SynapseWeight DONE");
+
             // Init the neuron type positions in ANN
             initNeuronType();
 
@@ -770,14 +774,20 @@ struct ScoreFunction
             // Init expected output neuron
             initExpectedOutputNeuron();
 
+            addDebugMessage(L"initializeANN:InitNeuron DONE");
+
             // Ticks simulation
             runTickSimulation();
+
+            addDebugMessage(L"initializeANN:runTickSimulation DONE");
 
             // Copy the state for rollback later
             copyMem(&bestANN, &currentANN, sizeof(ANN));
 
             // Compute R and roll back if neccessary
             unsigned int R = computeNonMatchingOutput();
+
+            addDebugMessage(L"initializeANN:computeNonMatchingOutput DONE");
 
             return R;
         }
@@ -787,6 +797,8 @@ struct ScoreFunction
         {
             // Initialize
             unsigned int bestR = initializeANN(publicKey, nonce, pRandom2Pool);
+
+            addDebugMessage(L"initializeANN DONE");
 
             for (unsigned long long s = 0; s < numberOfMutations; ++s)
             {
@@ -822,6 +834,12 @@ struct ScoreFunction
             }
 
             unsigned int score = numberOfOutputNeurons - bestR;
+
+            CHAR16 message[64];
+            setText(message, L"ComputeScore DONE with score ");
+            appendNumber(message, score, false);
+            addDebugMessage(message);
+
             return score;
         }
 
