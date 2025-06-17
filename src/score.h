@@ -739,12 +739,12 @@ struct ScoreFunction
             KangarooTwelve(combined, 64, hash, 32);
 
             // Initalize with nonce and public key
-            {
-                random2(hash, pRandom2Pool, paddingInitValue, paddingInitValueSizeInBytes);
+            //{
+            //    random2(hash, pRandom2Pool, paddingInitValue, paddingInitValueSizeInBytes);
 
-                // Init the neuron input and expected output value
-                copyMem((unsigned char*)&miningData, pRandom2Pool, sizeof(MiningData));
-            }
+            //    // Init the neuron input and expected output value
+            //    copyMem((unsigned char*)&miningData, pRandom2Pool, sizeof(MiningData));
+            //}
 
             unsigned long long& population = currentANN.population;
             Synapse* synapses = currentANN.synapses;
