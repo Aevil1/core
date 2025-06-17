@@ -778,10 +778,10 @@ struct ScoreFunction
             // Ticks simulation
             runTickSimulation();
 
-            //// Copy the state for rollback later
-            //copyMem(&bestANN, &currentANN, sizeof(ANN));
+            // Copy the state for rollback later
+            copyMem(&bestANN, &currentANN, sizeof(ANN));
 
-            //// Compute R and roll back if neccessary
+            // Compute R and roll back if neccessary
             unsigned int R = computeNonMatchingOutput();
 
             return R;
