@@ -14,6 +14,10 @@ unsigned long long top_of_stack;
 
 #define NOT_CALCULATED -127 //not yet calculated
 #define NULL_INDEX -2
+            
+constexpr unsigned char INPUT_NEURON_TYPE = 0;
+constexpr unsigned char OUTPUT_NEURON_TYPE = 1;
+constexpr unsigned char EVOLUTION_NEURON_TYPE = 2;
 
 #if !(defined (__AVX512F__) || defined(__AVX2__))
 static_assert(false, "Either AVX2 or AVX512 is required.");
@@ -155,13 +159,7 @@ struct ScoreFunction
         // Data for running the ANN
         struct Neuron
         {
-            enum Type
-            {
-                kInput,
-                kOutput,
-                kEvolution,
-            };
-            Type type;
+            unsigned char type;
             char value;
             bool markForRemoval;
         };
@@ -390,10 +388,10 @@ struct ScoreFunction
             Neuron* neurons = currentANN.neurons;
             unsigned long long& population = currentANN.population;
 
-            // Copy original neuron to the inserted one and set it as  Neuron::kEvolution type
+            // Copy original neuron to the inserted one and set it as  EVOLUTION_NEURON_TYPE type
             Neuron insertNeuron;
             insertNeuron = neurons[outgoingNeuron];
-            insertNeuron.type = Neuron::kEvolution;
+            insertNeuron.type = EVOLUTION_NEURON_TYPE;
             unsigned long long insertedNeuronIdx = outgoingNeuron + 1;
 
             char originalWeight = synapses[synapseIdx].weight;
@@ -506,7 +504,7 @@ struct ScoreFunction
             for (unsigned long long i = 0; i < population; i++)
             {
                 neurons[i].markForRemoval = false;
-                if (neurons[i].type == Neuron::kEvolution)
+                if (neurons[i].type == EVOLUTION_NEURON_TYPE)
                 {
                     if (isAllOutgoingSynapsesZeros(i) || isAllIncomingSynapsesZeros(i))
                     {
@@ -618,7 +616,7 @@ struct ScoreFunction
                     }
 
                     // Ouput neuron value check
-                    if (neurons[n].type == Neuron::kOutput && neurons[n].value == 0)
+                    if (neurons[n].type == OUTPUT_NEURON_TYPE && neurons[n].value == 0)
                     {
                         allOutputNeuronsIsNonZeros = false;
                     }
@@ -648,7 +646,7 @@ struct ScoreFunction
             unsigned long long outputIdx = 0;
             for (unsigned long long i = 0; i < population; i++)
             {
-                if (neurons[i].type == Neuron::kOutput)
+                if (neurons[i].type == OUTPUT_NEURON_TYPE)
                 {
                     if (neurons[i].value != outputNeuronExpectedValue[outputIdx])
                     {
@@ -668,7 +666,7 @@ struct ScoreFunction
             for (unsigned long long i = 0; i < population; ++i)
             {
                 // Input will use the init value
-                if (neurons[i].type == Neuron::kInput)
+                if (neurons[i].type == INPUT_NEURON_TYPE)
                 {
                     char neuronValue = 0;
                     unsigned char randomValue = miningData.inputNeuronRandomNumber[inputNeuronInitIndex];
@@ -690,7 +688,7 @@ struct ScoreFunction
             unsigned long long population = currentANN.population;
             for (unsigned long long i = 0; i < population; ++i)
             {
-                if (neurons[i].type == Neuron::kOutput)
+                if (neurons[i].type == OUTPUT_NEURON_TYPE)
                 {
                     neurons[i].value = 0;
                 }
@@ -707,7 +705,7 @@ struct ScoreFunction
             for (unsigned long long i = 0; i < population; ++i)
             {
                 neuronIndices[i] = i;
-                neurons[i].type = Neuron::kInput;
+                neurons[i].type = INPUT_NEURON_TYPE;
             }
             unsigned long long neuronCount = population;
             for (unsigned long long i = 0; i < numberOfOutputNeurons; ++i)
@@ -715,7 +713,7 @@ struct ScoreFunction
                 unsigned long long outputNeuronIdx = initValue->outputNeuronPositions[i] % neuronCount;
 
                 // Fill the neuron type
-                neurons[neuronIndices[outputNeuronIdx]].type = Neuron::kOutput;
+                neurons[neuronIndices[outputNeuronIdx]].type = OUTPUT_NEURON_TYPE;
                 outputNeuronIndices[i] = neuronIndices[outputNeuronIdx];
 
                 // This index is used, copy the end of indices array to current position and decrease the number of picking neurons
@@ -786,7 +784,6 @@ struct ScoreFunction
 
             return R;
 
-            //return 32;
         }
 
         // Main function for mining
