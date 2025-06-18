@@ -296,7 +296,8 @@ struct ScoreFunction
                 }
             }
 
-            // Shift the synapse array and the neuron array
+            // Shift the synapse array and the neuron array, also reduce the current ANN population
+            currentANN.population--;
             for (unsigned long long shiftIdx = neuronIdx; shiftIdx < currentANN.population; shiftIdx++)
             {
                 currentANN.neurons[shiftIdx] = currentANN.neurons[shiftIdx + 1];
@@ -304,7 +305,6 @@ struct ScoreFunction
                 // Also shift the synapses
                 copyMem(getSynapses(shiftIdx), getSynapses(shiftIdx + 1), numberOfNeighbors * sizeof(Synapse));
             }
-            currentANN.population--;
         }
 
         unsigned long long getNeighborNeuronIndex(unsigned long long neuronIndex, unsigned long long neighborOffset)
