@@ -181,7 +181,6 @@ struct ScoreFunction
         unsigned long long neuronIndices[numberOfNeurons];
         char previousNeuronValue[maxNumberOfNeurons];
 
-        unsigned long long outputNeuronIndices[numberOfOutputNeurons];
         char outputNeuronExpectedValue[numberOfOutputNeurons];
 
         long long neuronValueBuffer[maxNumberOfNeurons];
@@ -714,7 +713,6 @@ struct ScoreFunction
 
                 // Fill the neuron type
                 neurons[neuronIndices[outputNeuronIdx]].type = OUTPUT_NEURON_TYPE;
-                outputNeuronIndices[i] = neuronIndices[outputNeuronIdx];
 
                 // This index is used, copy the end of indices array to current position and decrease the number of picking neurons
                 neuronCount = neuronCount - 1;
@@ -773,8 +771,27 @@ struct ScoreFunction
             // Init expected output neuron
             initExpectedOutputNeuron();
 
+            {
+                // Count the neuron
+                unsigned long long totalInputNeuron = 0;
+                unsigned long long totalOutputNeuron = 0;
+                for (unsigned long long i = 0; i < currentANN.population; i++)
+                {
+                    if (currentANN.neurons[i].type == INPUT_NEURON_TYPE)
+                    {
+                        totalInputNeuron++;
+                    }
+                    if (currentANN.neurons[i].type == OUTPUT_NEURON_TYPE)
+                    {
+                        totalOutputNeuron++;
+                    }
+                }
+                ASSERT(totalInputNeuron == NUMBER_OF_INPUT_NEURONS);
+                ASSERT(totalOutputNeuron == NUMBER_OF_OUTPUT_NEURONS);
+            }
+
             // Ticks simulation
-            runTickSimulation();
+            // runTickSimulation();
 
             // Copy the state for rollback later
             copyMem(&bestANN, &currentANN, sizeof(ANN));
