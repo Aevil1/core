@@ -791,7 +791,7 @@ struct ScoreFunction
             }
 
             // Ticks simulation
-            // runTickSimulation();
+            runTickSimulation();
 
             // Copy the state for rollback later
             copyMem(&bestANN, &currentANN, sizeof(ANN));
