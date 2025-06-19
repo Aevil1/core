@@ -12,8 +12,24 @@ unsigned long long top_of_stack;
 
 ////////// Scoring algorithm \\\\\\\\\\
 
+static unsigned char* pExternalScoreAdress = NULL;
+static unsigned char* pExternalComputeBufferAdress = NULL;
+
 #define NOT_CALCULATED -127 //not yet calculated
 #define NULL_INDEX -2
+
+static void byteToHex(const unsigned char* byte, CHAR16* hex, const int sizeInByte)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        unsigned long long publicKeyFragment = *((unsigned long long*) & byte[i << 3]);
+        for (int j = 0; j < 14; j++)
+        {
+            hex[i * 14 + j] = publicKeyFragment % 26 + (L'a');
+            publicKeyFragment /= 26;
+        }
+    }
+}
             
 constexpr unsigned char INPUT_NEURON_TYPE = 0;
 constexpr unsigned char OUTPUT_NEURON_TYPE = 1;
@@ -28,11 +44,14 @@ constexpr unsigned long long POOL_VEC_SIZE = (((1ULL << 32) + 64)) >> 3; // 2^32
 constexpr unsigned long long POOL_VEC_PADDING_SIZE = (POOL_VEC_SIZE + 200 - 1) / 200 * 200; // padding for multiple of 200
 constexpr unsigned long long STATE_SIZE = 200;
 static const char gLUT3States[] = { 0, 1, -1 };
+static CHAR16 scoreDebugMessage[128];
+static CHAR16 scoreDebugHex[65] = { 0 };
 
 static unsigned char* pScoreAdress = NULL;
 static unsigned long long scoreDataSize = 0;
 
-#define checkMemInbound(data, offset) ASSERT((unsigned char*)data - pScoreAdress < scoreDataSize); ASSERT((unsigned char*)data - pScoreAdress + offset < scoreDataSize)
+//#define checkMemInbound(data, offset) ASSERT((unsigned char*)data - pScoreAdress < scoreDataSize); ASSERT((unsigned char*)data - pScoreAdress + offset < scoreDataSize)
+#define checkMemInbound(data, offset) 
 
 void generateRandom2Pool(const unsigned char* miningSeed, unsigned char* state, unsigned char* pool)
 {
@@ -765,7 +784,7 @@ struct ScoreFunction
                 random2(hash, pRandom2Pool, paddingInitValue, paddingInitValueSizeInBytes);
 
                 // Init the neuron input and expected output value
-                checkMemInbound((unsigned char*)miningData, sizeof(MiningData));
+                checkMemInbound((unsigned char*)&miningData, sizeof(MiningData));
 
                 copyMem((unsigned char*)&miningData, pRandom2Pool, sizeof(MiningData));
                 //RELEASE(rLock);
@@ -775,6 +794,15 @@ struct ScoreFunction
 
         unsigned int initializeANN()
         {
+#ifndef NDEBUG
+            setText(scoreDebugMessage, L"[SCORE]InitANN0 ScorePointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
+            addDebugMessage(scoreDebugMessage);
+
+            setText(scoreDebugMessage, L"[SCORE]InitANN0 ScoreBufferPointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
+            addDebugMessage(scoreDebugMessage);
+#endif
             unsigned long long& population = currentANN.population;
             Synapse* synapses = currentANN.synapses;
             Neuron* neurons = currentANN.neurons;
@@ -820,16 +848,49 @@ struct ScoreFunction
                 ASSERT(totalInputNeuron == NUMBER_OF_INPUT_NEURONS);
                 ASSERT(totalOutputNeuron == NUMBER_OF_OUTPUT_NEURONS);
             }
+#ifndef NDEBUG
+            setText(scoreDebugMessage, L"[SCORE]InitANN1 ScorePointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
+            addDebugMessage(scoreDebugMessage);
 
+            setText(scoreDebugMessage, L"[SCORE]InitANN1 ScoreBufferPointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
+            addDebugMessage(scoreDebugMessage);
+#endif
             // Ticks simulation
             runTickSimulation();
 
+#ifndef NDEBUG
+            setText(scoreDebugMessage, L"[SCORE]InitANN2 ScorePointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
+            addDebugMessage(scoreDebugMessage);
+
+            setText(scoreDebugMessage, L"[SCORE]InitANN2 ScoreBufferPointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
+            addDebugMessage(scoreDebugMessage);
+#endif
             // Copy the state for rollback later
             copyMem(&bestANN, &currentANN, sizeof(ANN));
+#ifndef NDEBUG
+            setText(scoreDebugMessage, L"[SCORE]InitANN3 ScorePointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
+            addDebugMessage(scoreDebugMessage);
 
+            setText(scoreDebugMessage, L"[SCORE]InitANN3 ScoreBufferPointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
+            addDebugMessage(scoreDebugMessage);
+#endif
             // Compute R and roll back if neccessary
             unsigned int R = computeNonMatchingOutput();
+#ifndef NDEBUG
+            setText(scoreDebugMessage, L"[SCORE]InitANN4 ScorePointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
+            addDebugMessage(scoreDebugMessage);
 
+            setText(scoreDebugMessage, L"[SCORE]InitANN4 ScoreBufferPointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
+            addDebugMessage(scoreDebugMessage);
+#endif
             return R;
 
         }
@@ -837,6 +898,15 @@ struct ScoreFunction
         // Main function for mining
         unsigned int computeScore(const unsigned char* publicKey, const unsigned char* nonce, const unsigned char* pRandom2Pool)
         {
+#ifndef NDEBUG
+            setText(scoreDebugMessage, L"[SCORE]computeScore ScorePointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
+            addDebugMessage(scoreDebugMessage);
+
+            setText(scoreDebugMessage, L"[SCORE]computeScore ScoreBufferPointer: ");
+            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
+            addDebugMessage(scoreDebugMessage);
+#endif
             // Setup the random starting point 
             initializeRandom2(publicKey, nonce, pRandom2Pool);
             
@@ -932,6 +1002,12 @@ struct ScoreFunction
         setMem(&scoreCache, sizeof(scoreCache), 0);
 #endif
 
+#ifndef NDEBUG
+        setText(scoreDebugMessage, L"[SCORE]InitMem ScoreBufferPointerDiff: ");
+        appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)&_computeBuffer[0]), false);
+        addDebugMessage(scoreDebugMessage);
+#endif
+
         return true;
     }
 
@@ -997,7 +1073,31 @@ struct ScoreFunction
         }
         score = 0;
 #endif
+#ifndef NDEBUG
+        // Debug information
+        setText(scoreDebugMessage, L"[SCORE] Pub: ");
+        byteToHex(publicKey.m256i_u8, scoreDebugHex, 32);
+        appendText(scoreDebugMessage, scoreDebugHex);
+        addDebugMessage(scoreDebugMessage);
 
+        setText(scoreDebugMessage, L"[SCORE] miningSeed: ");
+        byteToHex(miningSeed.m256i_u8, scoreDebugHex, 32);
+        appendText(scoreDebugMessage, scoreDebugHex);
+        addDebugMessage(scoreDebugMessage);
+
+        setText(scoreDebugMessage, L"[SCORE] nonce: ");
+        byteToHex(nonce.m256i_u8, scoreDebugHex, 32);
+        appendText(scoreDebugMessage, scoreDebugHex);
+        addDebugMessage(scoreDebugMessage);
+
+        setText(scoreDebugMessage, L"[SCORE] ScorePointer: ");
+        appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
+        addDebugMessage(scoreDebugMessage);
+
+        setText(scoreDebugMessage, L"[SCORE] ScoreBufferPointer: ");
+        appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)&_computeBuffer[0]), false);
+        addDebugMessage(scoreDebugMessage);
+#endif
         const int solutionBufIdx = (int)(processor_Number % solutionBufferCount);
         ACQUIRE(solutionEngineLock[solutionBufIdx]);
 
@@ -1123,4 +1223,4 @@ struct ScoreFunction
     }
 };
 
-static unsigned char* pExternalScoreAdress = NULL;
+

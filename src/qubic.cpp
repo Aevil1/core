@@ -5313,6 +5313,7 @@ static bool initialize()
         setMem(score, sizeof(*score), 0);
 
         pExternalScoreAdress = (unsigned char*)score;
+        pExternalComputeBufferAdress = (unsigned char*) & (score->_computeBuffer[0]);
 
         setMem(solutionThreshold, sizeof(int) * MAX_NUMBER_EPOCH, 0);
         if (!allocPoolWithErrorLog(L"minserSolutionFlag", NUMBER_OF_MINER_SOLUTION_FLAGS / 8, (void**)&minerSolutionFlags, __LINE__))
