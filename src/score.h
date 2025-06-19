@@ -830,7 +830,7 @@ struct ScoreFunction
             return score;
         }
 
-    } _computeBuffer[solutionBufferCount];
+    }* _computeBuffer;
     m256i currentRandomSeed;
 
     volatile char solutionEngineLock[solutionBufferCount];
@@ -861,17 +861,22 @@ struct ScoreFunction
 
     void freeMemory()
     {
+        if (_computeBuffer)
+        {
+            freePool(_computeBuffer);
+            _computeBuffer = nullptr;
+        }
     }
 
     bool initMemory()
     {
-<<<<<<< HEAD
-        random2PoolLock = 0;
-        currentRandomSeed = m256i::zero();
-
-=======
->>>>>>> ae4ac14 (a)
-        setMem(_computeBuffer, sizeof(_computeBuffer), 0);
+        if (_computeBuffer == nullptr)
+        {
+            if (!allocPoolWithErrorLog(L"computeBuffer (score solution buffer)", sizeof(computeBuffer) * solutionBufferCount, (void**)&_computeBuffer, __LINE__))
+            {
+                return false;
+            }
+        }
 
         for (int i = 0; i < solutionBufferCount; i++)
         {
