@@ -29,16 +29,23 @@ constexpr unsigned long long POOL_VEC_PADDING_SIZE = (POOL_VEC_SIZE + 200 - 1) /
 constexpr unsigned long long STATE_SIZE = 200;
 static const char gLUT3States[] = { 0, 1, -1 };
 
+static unsigned char* pScoreAdress = NULL;
+static unsigned long long scoreDataSize = 0;
+
 void generateRandom2Pool(const unsigned char* miningSeed, unsigned char* state, unsigned char* pool)
 {
     // same pool to be used by all computors/candidates and pool content changing each phase
     copyMem(&state[0], miningSeed, 32);
     setMem(&state[32], STATE_SIZE - 32, 0);
 
+    ASSERT(&state[0] - pScoreAdress + STATE_SIZE < scoreDataSize);
+
     for (unsigned int i = 0; i < POOL_VEC_PADDING_SIZE; i += STATE_SIZE)
     {
         KeccakP1600_Permute_12rounds(state);
         copyMem(&pool[i], state, STATE_SIZE);
+
+        ASSERT(&pool[i] - pScoreAdress + STATE_SIZE < scoreDataSize);
     }
 }
 
@@ -66,8 +73,18 @@ void random2(
             unsigned int base = (x[i] >> 3) >> 3;
             unsigned int m = x[i] & 63;
 
+
+            ASSERT((unsigned char*)&(((unsigned long long*)pool)[base]) - pScoreAdress + 8ULL < scoreDataSize);
+            ASSERT((unsigned char*)&(((unsigned long long*)pool)[base + 1]) - pScoreAdress + 8ULL < scoreDataSize);
+            ASSERT(base < POOL_VEC_PADDING_SIZE / 8);
+            ASSERT(base + 1 < POOL_VEC_PADDING_SIZE / 8);
+
             unsigned long long u64_0 = ((unsigned long long*)pool)[base];
             unsigned long long u64_1 = ((unsigned long long*)pool)[base + 1];
+
+
+
+            ASSERT(j * 8 * 8 + i * 8 < outputSizeInByte);
 
             // Move 8 * 8 * j to the current segment. 8 * i to current 8 bytes element
             if (m == 0)
@@ -894,6 +911,9 @@ struct ScoreFunction
 
     bool initMemory()
     {
+        pScoreAdress = (unsigned char*)this;
+        scoreDataSize = sizeof(*this);
+
         random2PoolLock = 0;
         setMem(_computeBuffer, sizeof(_computeBuffer), 0);
 
