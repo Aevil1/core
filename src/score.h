@@ -1122,3 +1122,5 @@ struct ScoreFunction
         }
     }
 };
+
+static unsigned char* pExternalScoreAdress = NULL;
