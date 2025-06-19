@@ -28,7 +28,6 @@ constexpr unsigned long long POOL_VEC_SIZE = (((1ULL << 32) + 64)) >> 3; // 2^32
 constexpr unsigned long long POOL_VEC_PADDING_SIZE = (POOL_VEC_SIZE + 200 - 1) / 200 * 200; // padding for multiple of 200
 constexpr unsigned long long STATE_SIZE = 200;
 static const char gLUT3States[] = { 0, 1, -1 };
-volatile char gRandom2PoolLock = 0;
 
 void generateRandom2Pool(const unsigned char* miningSeed, unsigned char* state, unsigned char* pool)
 {
@@ -140,13 +139,16 @@ struct ScoreFunction
         return val;
     }
 
+
+    volatile char random2PoolLock;
     unsigned char state[STATE_SIZE];
+    unsigned char externalPoolVec[POOL_VEC_PADDING_SIZE];
     unsigned char poolVec[POOL_VEC_PADDING_SIZE];
 
     void initPool(const unsigned char* miningSeed)
     {
         // Init random2 pool with mining seed
-        generateRandom2Pool(miningSeed, state, poolVec);
+        generateRandom2Pool(miningSeed, state, externalPoolVec);
     }
 
     struct computeBuffer
@@ -731,7 +733,10 @@ struct ScoreFunction
             }
         }
 
-        unsigned int initializeANN(const unsigned char* publicKey, const unsigned char* nonce, const unsigned char* pRandom2Pool)
+        void initializeRandom2(
+            const unsigned char* publicKey, 
+            const unsigned char* nonce,
+            const unsigned char* pRandom2Pool)
         {
             copyMem(combined, publicKey, 32);
             copyMem(combined + 32, nonce, 32);
@@ -739,14 +744,18 @@ struct ScoreFunction
 
             // Initalize with nonce and public key
             {
-                ACQUIRE(gRandom2PoolLock);
+                //ACQUIRE(rLock);
                 random2(hash, pRandom2Pool, paddingInitValue, paddingInitValueSizeInBytes);
 
                 // Init the neuron input and expected output value
                 copyMem((unsigned char*)&miningData, pRandom2Pool, sizeof(MiningData));
-                RELEASE(gRandom2PoolLock);
+                //RELEASE(rLock);
             }
 
+        }
+
+        unsigned int initializeANN()
+        {
             unsigned long long& population = currentANN.population;
             Synapse* synapses = currentANN.synapses;
             Neuron* neurons = currentANN.neurons;
@@ -806,8 +815,11 @@ struct ScoreFunction
         // Main function for mining
         unsigned int computeScore(const unsigned char* publicKey, const unsigned char* nonce, const unsigned char* pRandom2Pool)
         {
+            // Setup the random starting point 
+            initializeRandom2(publicKey, nonce, pRandom2Pool);
+            
             // Initialize
-            unsigned int bestR = initializeANN(publicKey, nonce, pRandom2Pool);
+            unsigned int bestR = initializeANN();
 
             //for (unsigned long long s = 0; s < numberOfMutations; ++s)
             //{
@@ -859,15 +871,16 @@ struct ScoreFunction
     void initMiningData(m256i randomSeed)
     {
         // Below assume when a new mining seed is provided, we need to re-calculate the random2 pool
-        ACQUIRE(gRandom2PoolLock);
-        currentRandomSeed = randomSeed; // persist the initial random seed to be able to send it back on system info response
-
         // Check if random pool need to be re-generated
         if (!isZero(randomSeed))
         {
             initPool(randomSeed.m256i_u8);
         }
-        RELEASE(gRandom2PoolLock);
+        currentRandomSeed = randomSeed; // persist the initial random seed to be able to send it back on system info response
+
+        ACQUIRE(random2PoolLock);
+        copyMem(poolVec, externalPoolVec, POOL_VEC_PADDING_SIZE);
+        RELEASE(random2PoolLock);
     }
 
     ~ScoreFunction()
@@ -881,6 +894,7 @@ struct ScoreFunction
 
     bool initMemory()
     {
+        random2PoolLock = 0;
         setMem(_computeBuffer, sizeof(_computeBuffer), 0);
 
         for (int i = 0; i < solutionBufferCount; i++)
