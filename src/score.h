@@ -1101,7 +1101,7 @@ struct ScoreFunction
         const int solutionBufIdx = (int)(processor_Number % solutionBufferCount);
         ACQUIRE(solutionEngineLock[solutionBufIdx]);
 
-        score = computeScore(processor_Number, publicKey, nonce);
+        score = computeScore(solutionBufIdx, publicKey, nonce);
 
         RELEASE(solutionEngineLock[solutionBufIdx]);
 #if USE_SCORE_CACHE
