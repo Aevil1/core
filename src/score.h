@@ -32,6 +32,8 @@ static const char gLUT3States[] = { 0, 1, -1 };
 static unsigned char* pScoreAdress = NULL;
 static unsigned long long scoreDataSize = 0;
 
+#define checkMemInbound(data, offset) ASSERT((unsigned char*)data - pScoreAdress < scoreDataSize); ASSERT((unsigned char*)data - pScoreAdress + offset < scoreDataSize)
+
 void generateRandom2Pool(const unsigned char* miningSeed, unsigned char* state, unsigned char* pool)
 {
     // same pool to be used by all computors/candidates and pool content changing each phase
@@ -45,7 +47,7 @@ void generateRandom2Pool(const unsigned char* miningSeed, unsigned char* state, 
         KeccakP1600_Permute_12rounds(state);
         copyMem(&pool[i], state, STATE_SIZE);
 
-        ASSERT(&pool[i] - pScoreAdress + STATE_SIZE < scoreDataSize);
+        checkMemInbound(&pool[i], STATE_SIZE);
     }
 }
 
@@ -73,16 +75,14 @@ void random2(
             unsigned int base = (x[i] >> 3) >> 3;
             unsigned int m = x[i] & 63;
 
+            checkMemInbound((unsigned char*)&(((unsigned long long*)pool)[base]), 8);
+            checkMemInbound((unsigned char*)&(((unsigned long long*)pool)[base + 1]), 8);
 
-            ASSERT((unsigned char*)&(((unsigned long long*)pool)[base]) - pScoreAdress + 8ULL < scoreDataSize);
-            ASSERT((unsigned char*)&(((unsigned long long*)pool)[base + 1]) - pScoreAdress + 8ULL < scoreDataSize);
             ASSERT(base < POOL_VEC_PADDING_SIZE / 8);
             ASSERT(base + 1 < POOL_VEC_PADDING_SIZE / 8);
 
             unsigned long long u64_0 = ((unsigned long long*)pool)[base];
             unsigned long long u64_1 = ((unsigned long long*)pool)[base + 1];
-
-
 
             ASSERT(j * 8 * 8 + i * 8 < outputSizeInByte);
 
@@ -765,6 +765,8 @@ struct ScoreFunction
                 random2(hash, pRandom2Pool, paddingInitValue, paddingInitValueSizeInBytes);
 
                 // Init the neuron input and expected output value
+                checkMemInbound((unsigned char*)miningData, sizeof(MiningData));
+
                 copyMem((unsigned char*)&miningData, pRandom2Pool, sizeof(MiningData));
                 //RELEASE(rLock);
             }
@@ -778,6 +780,8 @@ struct ScoreFunction
             Neuron* neurons = currentANN.neurons;
             InitValue* initValue = (InitValue*)paddingInitValue;
 
+            checkMemInbound((unsigned char*)initValue, sizeof(InitValue));
+
             // Initialization
             population = numberOfNeurons;
 
@@ -785,6 +789,7 @@ struct ScoreFunction
             const unsigned long long initNumberOfSynapses = population * numberOfNeighbors;
             for (unsigned long long i = 0; i < initNumberOfSynapses; ++i)
             {
+                checkMemInbound((unsigned char*)&synapses[i], sizeof(Synapse));
                 synapses[i].weight = gLUT3States[initValue->synapseWeight[i] % 3];
             }
 
