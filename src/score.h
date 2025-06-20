@@ -11,26 +11,9 @@ unsigned long long top_of_stack;
 
 
 ////////// Scoring algorithm \\\\\\\\\\
-
-static unsigned char* pExternalScoreAdress = NULL;
-static unsigned char* pExternalComputeBufferAdress = NULL;
-
 #define NOT_CALCULATED -127 //not yet calculated
 #define NULL_INDEX -2
 
-static void byteToHex(const unsigned char* byte, CHAR16* hex, const int sizeInByte)
-{
-    for (int i = 0; i < 4; i++)
-    {
-        unsigned long long publicKeyFragment = *((unsigned long long*) & byte[i << 3]);
-        for (int j = 0; j < 14; j++)
-        {
-            hex[i * 14 + j] = publicKeyFragment % 26 + (L'a');
-            publicKeyFragment /= 26;
-        }
-    }
-}
-            
 constexpr unsigned char INPUT_NEURON_TYPE = 0;
 constexpr unsigned char OUTPUT_NEURON_TYPE = 1;
 constexpr unsigned char EVOLUTION_NEURON_TYPE = 2;
@@ -44,14 +27,6 @@ constexpr unsigned long long POOL_VEC_SIZE = (((1ULL << 32) + 64)) >> 3; // 2^32
 constexpr unsigned long long POOL_VEC_PADDING_SIZE = (POOL_VEC_SIZE + 200 - 1) / 200 * 200; // padding for multiple of 200
 constexpr unsigned long long STATE_SIZE = 200;
 static const char gLUT3States[] = { 0, 1, -1 };
-static CHAR16 scoreDebugMessage[128];
-static CHAR16 scoreDebugHex[65] = { 0 };
-
-static unsigned char* pScoreAdress = NULL;
-static unsigned long long scoreDataSize = 0;
-
-//#define checkMemInbound(data, offset) ASSERT((unsigned char*)data - pScoreAdress < scoreDataSize); ASSERT((unsigned char*)data - pScoreAdress + offset < scoreDataSize)
-#define checkMemInbound(data, offset) 
 
 void generateRandom2Pool(const unsigned char* miningSeed, unsigned char* state, unsigned char* pool)
 {
@@ -59,14 +34,11 @@ void generateRandom2Pool(const unsigned char* miningSeed, unsigned char* state, 
     copyMem(&state[0], miningSeed, 32);
     setMem(&state[32], STATE_SIZE - 32, 0);
 
-    ASSERT(&state[0] - pScoreAdress + STATE_SIZE < scoreDataSize);
 
     for (unsigned int i = 0; i < POOL_VEC_PADDING_SIZE; i += STATE_SIZE)
     {
         KeccakP1600_Permute_12rounds(state);
         copyMem(&pool[i], state, STATE_SIZE);
-
-        checkMemInbound(&pool[i], STATE_SIZE);
     }
 }
 
@@ -94,12 +66,6 @@ void random2(
             unsigned int base = (x[i] >> 3) >> 3;
             unsigned int m = x[i] & 63;
 
-            checkMemInbound((unsigned char*)&(((unsigned long long*)pool)[base]), 8);
-            checkMemInbound((unsigned char*)&(((unsigned long long*)pool)[base + 1]), 8);
-
-            ASSERT(base < POOL_VEC_PADDING_SIZE / 8);
-            ASSERT(base + 1 < POOL_VEC_PADDING_SIZE / 8);
-
             unsigned long long u64_0 = ((unsigned long long*)pool)[base];
             unsigned long long u64_1 = ((unsigned long long*)pool)[base + 1];
 
@@ -123,6 +89,30 @@ void random2(
 
 }
 
+// Clamp the neuron value
+template  <typename T>
+static T clampNeuron(T val)
+{
+    if (val > NEURON_VALUE_LIMIT)
+    {
+        return NEURON_VALUE_LIMIT;
+    }
+    else if (val < -NEURON_VALUE_LIMIT)
+    {
+        return -NEURON_VALUE_LIMIT;
+    }
+    return val;
+}
+
+static void extract64Bits(unsigned long long number, char* output)
+{
+    int count = 0;
+    for (int i = 0; i < 64; ++i)
+    {
+        output[i] = ((number >> i) & 1);
+    }
+}
+
 
 template <
     unsigned long long numberOfInputNeurons, // K
@@ -139,42 +129,31 @@ struct ScoreFunction
     static constexpr unsigned long long numberOfNeurons = numberOfInputNeurons + numberOfOutputNeurons;
     static constexpr unsigned long long maxNumberOfNeurons = populationThreshold;
     static constexpr unsigned long long maxNumberOfSynapses = populationThreshold * numberOfNeighbors;
+    static constexpr unsigned long long initNumberOfSynapses = numberOfNeurons * numberOfNeighbors;
 
+    static_assert(numberOfInputNeurons % 64 == 0, "numberOfInputNeurons must be divided by 64");
+    static_assert(numberOfOutputNeurons % 64 == 0, "numberOfOutputNeurons must be divided by 64");
     static_assert(maxNumberOfSynapses <= (0xFFFFFFFFFFFFFFFF << 1ULL), "maxNumberOfSynapses must less than or equal MAX_UINT64/2");
+    static_assert(initNumberOfSynapses % 32 == 0, "initNumberOfSynapses must be divided by 32");
     static_assert(numberOfNeighbors % 2 == 0, "numberOfNeighbors must divided by 2");
     static_assert(populationThreshold > numberOfNeurons, "populationThreshold must be greater than numberOfNeurons");
     static_assert(numberOfNeurons > numberOfNeighbors, "Number of neurons must be greater than the number of neighbors");
 
     // Intermediate data
+    // Intermediate data
     struct InitValue
     {
         unsigned long long outputNeuronPositions[numberOfOutputNeurons];
-        unsigned long long synapseWeight[maxNumberOfSynapses];
+        unsigned long long synapseWeight[initNumberOfSynapses / 32]; // each 64bits elements will decide value of 32 synapses
         unsigned long long synpaseMutation[numberOfMutations];
     };
 
     struct MiningData
     {
-        unsigned char inputNeuronRandomNumber[numberOfInputNeurons];
-        unsigned char outputNeuronRandomNumber[numberOfOutputNeurons];
+        unsigned long long inputNeuronRandomNumber[numberOfInputNeurons / 64];  // each bit will use for generate input neuron value
+        unsigned long long outputNeuronRandomNumber[numberOfOutputNeurons / 64]; // each bit will use for generate expected output neuron value
     };
     static constexpr unsigned long long paddingInitValueSizeInBytes = (sizeof(InitValue) + 64 - 1) / 64 * 64;
-
-    // Clamp the neuron value
-    template  <typename T>
-    static T clampNeuron(T val)
-    {
-        if (val > NEURON_VALUE_LIMIT)
-        {
-            return NEURON_VALUE_LIMIT;
-        }
-        else if (val < -NEURON_VALUE_LIMIT)
-        {
-            return -NEURON_VALUE_LIMIT;
-        }
-        return val;
-    }
-
 
     volatile char random2PoolLock;
     unsigned char state[STATE_SIZE];
@@ -287,8 +266,6 @@ struct ScoreFunction
             {
                 nnIndex += population;
             }
-            ASSERT(nnIndex < population);
-            ASSERT(nnIndex >= 0);
 
             return (unsigned long long)nnIndex;
         }
@@ -699,19 +676,24 @@ struct ScoreFunction
         {
             unsigned long long population = currentANN.population;
             Neuron* neurons = currentANN.neurons;
+            char neuronArray[64] = { 0 };
             unsigned long long inputNeuronInitIndex = 0;
             for (unsigned long long i = 0; i < population; ++i)
             {
                 // Input will use the init value
                 if (neurons[i].type == INPUT_NEURON_TYPE)
                 {
-                    char neuronValue = 0;
-                    unsigned char randomValue = miningData.inputNeuronRandomNumber[inputNeuronInitIndex];
-                    inputNeuronInitIndex++;
-                    neuronValue = gLUT3States[randomValue % 3];
+                    // Prepare new pack
+                    if (inputNeuronInitIndex % 64 == 0)
+                    {
+                        extract64Bits(miningData.inputNeuronRandomNumber[inputNeuronInitIndex / 64], neuronArray);
+                    }
+                    char neuronValue = neuronArray[inputNeuronInitIndex % 64];
 
                     // Convert value of neuron to trits (keeping 1 as 1, and changing 0 to -1.).
                     neurons[i].value = (neuronValue == 0) ? -1 : neuronValue;
+
+                    inputNeuronInitIndex++;
                 }
             }
         }
@@ -760,11 +742,16 @@ struct ScoreFunction
 
         void initExpectedOutputNeuron()
         {
+            char neuronArray[64] = { 0 };
             for (unsigned long long i = 0; i < numberOfOutputNeurons; ++i)
             {
-                char neuronValue = 0;
-                unsigned char randomNumber = miningData.outputNeuronRandomNumber[i];
-                neuronValue = gLUT3States[randomNumber % 3];
+                // Prepare new pack
+                if (i % 64 == 0)
+                {
+                    extract64Bits(miningData.outputNeuronRandomNumber[i / 64], neuronArray);
+                }
+                char neuronValue = neuronArray[i % 64];
+                // Convert value of neuron (keeping 1 as 1, and changing 0 to -1.).
                 outputNeuronExpectedValue[i] = (neuronValue == 0) ? -1 : neuronValue;
             }
         }
@@ -780,45 +767,39 @@ struct ScoreFunction
 
             // Initalize with nonce and public key
             {
-                //ACQUIRE(rLock);
                 random2(hash, pRandom2Pool, paddingInitValue, paddingInitValueSizeInBytes);
 
-                // Init the neuron input and expected output value
-                checkMemInbound((unsigned char*)&miningData, sizeof(MiningData));
-
                 copyMem((unsigned char*)&miningData, pRandom2Pool, sizeof(MiningData));
-                //RELEASE(rLock);
             }
 
         }
 
         unsigned int initializeANN()
         {
-#ifndef NDEBUG
-            setText(scoreDebugMessage, L"[SCORE]InitANN0 ScorePointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
-            addDebugMessage(scoreDebugMessage);
-
-            setText(scoreDebugMessage, L"[SCORE]InitANN0 ScoreBufferPointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
-            addDebugMessage(scoreDebugMessage);
-#endif
             unsigned long long& population = currentANN.population;
             Synapse* synapses = currentANN.synapses;
             Neuron* neurons = currentANN.neurons;
             InitValue* initValue = (InitValue*)paddingInitValue;
 
-            checkMemInbound((unsigned char*)initValue, sizeof(InitValue));
-
             // Initialization
             population = numberOfNeurons;
 
             // Synapse weight initialization
-            const unsigned long long initNumberOfSynapses = population * numberOfNeighbors;
-            for (unsigned long long i = 0; i < initNumberOfSynapses; ++i)
+            for (unsigned long long i = 0; i < (initNumberOfSynapses / 32); ++i)
             {
-                checkMemInbound((unsigned char*)&synapses[i], sizeof(Synapse));
-                synapses[i].weight = gLUT3States[initValue->synapseWeight[i] % 3];
+                const unsigned long long mask = 0b11;
+
+                for (int j = 0; j < 32; ++j)
+                {
+                    int shiftVal = j * 2;
+                    unsigned char extractValue = (unsigned char)((initValue->synapseWeight[i] >> shiftVal) & mask);
+                    switch (extractValue)
+                    {
+                        case 2: synapses[32 * i + j].weight = -1; break;
+                        case 3: synapses[32 * i + j].weight = 1; break;
+                        default: synapses[32 * i + j].weight = 0;
+                    }
+                }
             }
 
             // Init the neuron type positions in ANN
@@ -845,52 +826,17 @@ struct ScoreFunction
                         totalOutputNeuron++;
                     }
                 }
-                ASSERT(totalInputNeuron == NUMBER_OF_INPUT_NEURONS);
-                ASSERT(totalOutputNeuron == NUMBER_OF_OUTPUT_NEURONS);
             }
-#ifndef NDEBUG
-            setText(scoreDebugMessage, L"[SCORE]InitANN1 ScorePointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
-            addDebugMessage(scoreDebugMessage);
 
-            setText(scoreDebugMessage, L"[SCORE]InitANN1 ScoreBufferPointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
-            addDebugMessage(scoreDebugMessage);
-#endif
             // Ticks simulation
             runTickSimulation();
 
-#ifndef NDEBUG
-            setText(scoreDebugMessage, L"[SCORE]InitANN2 ScorePointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
-            addDebugMessage(scoreDebugMessage);
-
-            setText(scoreDebugMessage, L"[SCORE]InitANN2 ScoreBufferPointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
-            addDebugMessage(scoreDebugMessage);
-#endif
             // Copy the state for rollback later
             copyMem(&bestANN, &currentANN, sizeof(ANN));
-#ifndef NDEBUG
-            setText(scoreDebugMessage, L"[SCORE]InitANN3 ScorePointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
-            addDebugMessage(scoreDebugMessage);
 
-            setText(scoreDebugMessage, L"[SCORE]InitANN3 ScoreBufferPointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
-            addDebugMessage(scoreDebugMessage);
-#endif
             // Compute R and roll back if neccessary
             unsigned int R = computeNonMatchingOutput();
-#ifndef NDEBUG
-            setText(scoreDebugMessage, L"[SCORE]InitANN4 ScorePointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
-            addDebugMessage(scoreDebugMessage);
 
-            setText(scoreDebugMessage, L"[SCORE]InitANN4 ScoreBufferPointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
-            addDebugMessage(scoreDebugMessage);
-#endif
             return R;
 
         }
@@ -898,15 +844,6 @@ struct ScoreFunction
         // Main function for mining
         unsigned int computeScore(const unsigned char* publicKey, const unsigned char* nonce, const unsigned char* pRandom2Pool)
         {
-#ifndef NDEBUG
-            setText(scoreDebugMessage, L"[SCORE]computeScore ScorePointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)pScoreAdress), false);
-            addDebugMessage(scoreDebugMessage);
-
-            setText(scoreDebugMessage, L"[SCORE]computeScore ScoreBufferPointer: ");
-            appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
-            addDebugMessage(scoreDebugMessage);
-#endif
             // Setup the random starting point 
             initializeRandom2(publicKey, nonce, pRandom2Pool);
             
@@ -986,9 +923,6 @@ struct ScoreFunction
 
     bool initMemory()
     {
-        pScoreAdress = (unsigned char*)this;
-        scoreDataSize = sizeof(*this);
-
         random2PoolLock = 0;
         setMem(_computeBuffer, sizeof(_computeBuffer), 0);
 
@@ -1000,12 +934,6 @@ struct ScoreFunction
 #if USE_SCORE_CACHE
         scoreCacheLock = 0;
         setMem(&scoreCache, sizeof(scoreCache), 0);
-#endif
-
-#ifndef NDEBUG
-        setText(scoreDebugMessage, L"[SCORE]InitMem ScoreBufferPointerDiff: ");
-        appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)&_computeBuffer[0]), false);
-        addDebugMessage(scoreDebugMessage);
 #endif
 
         return true;
@@ -1072,31 +1000,6 @@ struct ScoreFunction
             return score;
         }
         score = 0;
-#endif
-#ifndef NDEBUG
-        // Debug information
-        setText(scoreDebugMessage, L"[SCORE] Pub: ");
-        byteToHex(publicKey.m256i_u8, scoreDebugHex, 32);
-        appendText(scoreDebugMessage, scoreDebugHex);
-        addDebugMessage(scoreDebugMessage);
-
-        setText(scoreDebugMessage, L"[SCORE] miningSeed: ");
-        byteToHex(miningSeed.m256i_u8, scoreDebugHex, 32);
-        appendText(scoreDebugMessage, scoreDebugHex);
-        addDebugMessage(scoreDebugMessage);
-
-        setText(scoreDebugMessage, L"[SCORE] nonce: ");
-        byteToHex(nonce.m256i_u8, scoreDebugHex, 32);
-        appendText(scoreDebugMessage, scoreDebugHex);
-        addDebugMessage(scoreDebugMessage);
-
-        setText(scoreDebugMessage, L"[SCORE] ScorePointer: ");
-        appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)this), false);
-        addDebugMessage(scoreDebugMessage);
-
-        setText(scoreDebugMessage, L"[SCORE] ScoreBufferPointer: ");
-        appendNumber(scoreDebugMessage, (unsigned long long)((unsigned char*)&_computeBuffer[0]), false);
-        addDebugMessage(scoreDebugMessage);
 #endif
         const int solutionBufIdx = (int)(processor_Number % solutionBufferCount);
         ACQUIRE(solutionEngineLock[solutionBufIdx]);
