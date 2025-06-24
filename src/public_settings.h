@@ -95,9 +95,9 @@ static unsigned short CUSTOM_MINING_CACHE_FILE_NAME[] = L"custom_mining_cache???
 #define FIRST_TICK_TRANSACTION_OFFSET sizeof(unsigned long long)
 #define MAX_TRANSACTION_SIZE (MAX_INPUT_SIZE + sizeof(Transaction) + SIGNATURE_SIZE)
 
-#define INTERNAL_COMPUTATIONS_INTERVAL 676
-#define EXTERNAL_COMPUTATIONS_INTERVAL (676 + 1)
-static_assert(INTERNAL_COMPUTATIONS_INTERVAL >= NUMBER_OF_COMPUTORS, "Internal computation phase needs to be at least equal NUMBER_OF_COMPUTORS");
+#define INTERNAL_COMPUTATIONS_INTERVAL 30
+#define EXTERNAL_COMPUTATIONS_INTERVAL (40+ 1)
+//static_assert(INTERNAL_COMPUTATIONS_INTERVAL >= NUMBER_OF_COMPUTORS, "Internal computation phase needs to be at least equal NUMBER_OF_COMPUTORS");
 
 // Format is DoW-hh-mm-ss in hex format, total 4bytes, each use 1 bytes
 // DoW: Day of the week 0: Sunday, 1 = Monday ...
